@@ -1,3 +1,4 @@
+from app.crypto import encrypt_message, decrypt_message
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from sqlalchemy.orm import Session
 from typing import Dict
@@ -26,7 +27,7 @@ class ConnectionManager:
     async def send_message(self, message: str, sender: str, recipient: str):
         if recipient in self.active_connections:
             await self.active_connections[recipient].send_text(
-                json.dumps({"from": sender, "message": message})
+                json.dumps({"from": sender, "message": decrypt_message(message)})
             )
 
 manager = ConnectionManager()
@@ -42,13 +43,14 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
             db_message = Message(
                 sender_email=user_email,
                 recipient_email=message_data["to"],
-                content=message_data["message"]
+                content=encrypt_message(message_data["message"])
             )
             db.add(db_message)
             db.commit()
+            print(f"Сообщение сохранено: {user_email} -> {message_data['to']}")
             
             await manager.send_message(
-                message=message_data["message"],
+                message=encrypt_message(message_data["message"]),
                 sender=user_email,
                 recipient=message_data["to"]
             )
