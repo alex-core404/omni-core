@@ -183,7 +183,16 @@
             document.getElementById("chat-header").innerText = contact;
             document.getElementById("messages").innerHTML = "";
             renderContacts();
+            loadHistory(contact);
         }
+        async function loadHistory(contact) {
+            const res = await fetch(`${API}/history/${email}/${contact}`);
+            const data = await res.json();
+            data.forEach(msg => {
+                addMessage(msg.message, msg.from === email ? "out" : "in");
+            });
+        }
+
 
         function connectWS() {
             ws = new WebSocket(`ws://5.42.110.162:8000/ws/${email}`);
