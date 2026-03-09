@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Omni</title>
+</head>
+<body>
+    <h1>Omni</h1>
+    
+    <input id="email" placeholder="Твой email" />
+    <button onclick="connect()">Подключиться</button>
+    
+    <br><br>
+
+    <input id="to" placeholder="Email получателя" />
+    <input id="message" placeholder="Сообщение" />
+    <button onclick="sendMessage()">Отправить</button>
+
+    <div id="messages"></div> 
+
+    <script>
+        let ws;
+        function connect() {
+            const email = document.getElementById("email").value;
+            ws = new WebSocket(`ws://localhost:8000/ws/${email}`);
+
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                const div = document.getElementById("messages");
+                div.innerHTML += `<p><b>${data.from}:</b> ${data.message}</p>`;            
+            };
+
+            ws.onopen = function() {
+                alert("Подключен как " + email);
+            };
+        }
+
+        function sendMessage() {
+            const to = document.getElementById("to").value;
+            const message = document.getElementById("message").value;
+            ws.send(JSON.stringify({to: to, message: message}));
+        }
+    </script>
+</body>
+</html>
+
+        
+
+    

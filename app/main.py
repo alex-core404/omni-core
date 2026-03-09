@@ -1,8 +1,14 @@
 from fastapi import FastAPI
-from app.routers import auth
+from fastapi.staticfiles import StaticFiles
+from app.routers import auth, chat
 
 app = FastAPI()
+
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
 app.include_router(auth.router)
+app.include_router(chat.router)
+
 @app.get("/")
 async def root():
     return {"message": "Omni is alive!"}
