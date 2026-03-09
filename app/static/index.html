@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Omni - Вход</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0f0f0f;
+            color: #fff;
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background: #1a1a1a;
+            padding: 40px;
+            border-radius: 12px;
+            width: 360px;
+        }
+        h1 { text-align: center; margin-bottom: 30px; font-size: 28px; }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 16px;
+            background: #2a2a2a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 15px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #6c63ff;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 15px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        button:hover { background: #574fd6; }
+        .error { color: #ff4444; text-align: center; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Omni</h1>
+        <input id="email" type="email" placeholder="Email" />
+        <input id="password" type="password" placeholder="Пароль" />
+        <button onclick="login()">Войти</button>
+        <button onclick="register()" style="background:#2a2a2a;">Зарегистрироваться</button>
+        <div class="error" id="error"></div>
+    </div>
+    
+    <script>
+        const API = "http://5.42.110.162:8000";
+
+        async function login() {
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            const res = await fetch(`${API}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+            if (data.access_token) {
+                localStorage.setItem("token", data.access_token);
+                localStorage.setItem("email", email);
+                window.location.href = "/static/app.html";
+            } else {
+                document.getElementById("error").innerText = "Неверный email или пароль";
+            }
+        }
+        
+        async function register() {
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            const res = await fetch(`${API}/auth/register`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+            if (data.id) {
+                document.getElementById("error"). style.color = "#44ff44";
+                document.getElementById("error").innerText = "Зарегестрирован! Войдите.";
+            } else {
+                document.getElementById("error").innerText = "Ошибка регистрации";
+            }
+        }    
+    </script>
+</body>
+</html>
+
+           
+
+
+    
+
+

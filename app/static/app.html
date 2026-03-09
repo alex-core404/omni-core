@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Omni</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0f0f0f;
+            color: #fff;
+            font-family: sans-serif;
+            display: flex;
+            height: 100vh;
+        }
+        .sidebar {
+            width: 280px;
+            background: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #2a2a2a;
+        }
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #2a2a2a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .contacts { flex: 1; overflow-y: auto; }
+        .contact {
+            padding: 16px 20px;
+            cursor: pointer;
+            border-bottom: 1px solid #222;
+        }
+        .contact:hover { background: #2a2a2a; }
+        .contact.active { background: #2a2a2a; }
+        .add-contact {
+            padding: 16px 20px;
+            border-top: 1px solid #2a2a2a;
+            display: flex;
+            gap: 8px;
+        }
+        .add-contact input {
+            flex: 1;
+            padding: 8px;
+            background: #2a2a2a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #fff;
+        }
+        .add-contact button {
+            padding: 8px 12px;
+            background: #6c63ff;
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            cursor: pointer;
+        }
+        .chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-header {
+            padding: 20px;
+            background: #1a1a1a;
+            border-bottom: 1px solid #2a2a2a;
+        }
+        .messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .message {
+            max-width: 60%;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+        .message.out {
+            background: #6c63ff;
+            align-self: flex-end;
+        }
+        .message.in {
+            background: #2a2a2a;
+            align-self: flex-start;
+        }
+        .input-area {
+            padding: 16px 20px;
+            background: #1a1a1a;
+            border-top: 1px solid #2a2a2a;
+            display: flex;
+            gap: 10px;
+        }
+        .input-area input {
+            flex: 1;
+            padding: 12px;
+            background: #2a2a2a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 15px;
+        }
+        .input-area button {
+            padding: 12px 20px;
+            background: #6c63ff;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+        }
+        .logout { 
+            background: none; 
+            border: none; 
+            color: #888; 
+            cursor: pointer;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <span id="my-email" style="font-size:13px;color:#888;"></span>
+            <button class="logout" onclick="logout()">Выйти</button>
+        </div>
+        <div class="contacts" id="contacts"></div>
+        <div class="add-contact">
+            <input id="new-contact" placeholder="Email контакта" />
+            <button onclick="addContact()">+</button>
+        </div>
+    </div>
+
+    <div class="chat">
+        <div class="chat-header" id="chat-header">Выберите контакт</div>
+        <div class="messages" id="messages"></div>
+        <div class="input-area">
+            <input id="message-input" placeholder="Сообщение..." onkeydown="if(event.key==='Enter') sendMessage()" />
+            <button onclick="sendMessage()">→</button>
+        </div>
+    </div>
+
+    <script>
+        const API = "http://5.42.110.162:8000";
+        const email = localStorage.getItem("email");
+        const token = localStorage.getItem("token");
+
+        if (!token) window.location.href = "/static/index.html";
+
+        document.getElementById("my-email").innerText = email;
+
+        let ws;
+        let currentContact = null;
+        let contacts = JSON.parse(localStorage.getItem("contacts") || "[]");
+
+        function renderContacts() {
+            const div = document.getElementById("contacts");
+            div.innerHTML = "";
+            contacts.forEach(c => {
+                const el = document.createElement("div");
+                el.className = "contact" + (c === currentContact ? " active" : "");
+                el.innerText = c;
+                el.onclick = () => openChat(c);
+                div.appendChild(el);
+            });
+        }
+
+        function addContact() {
+            const val = document.getElementById("new-contact").value.trim();
+            if (val && !contacts.includes(val)) {
+                contacts.push(val);
+                localStorage.setItem("contacts", JSON.stringify(contacts));
+                renderContacts();
+                document.getElementById("new-contact").value = "";
+            }
+        }
+
+        function openChat(contact) {
+            currentContact = contact;
+            document.getElementById("chat-header").innerText = contact;
+            document.getElementById("messages").innerHTML = "";
+            renderContacts();
+        }
+
+        function connectWS() {
+            ws = new WebSocket(`ws://5.42.110.162:8000/ws/${email}`);
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.from === currentContact) {
+                    addMessage(data.message, "in");
+                }
+            };
+            ws.onclose = () => setTimeout(connectWS, 3000);
+        }
+
+        function addMessage(text, type) {
+            const div = document.getElementById("messages");
+            const msg = document.createElement("div");
+            msg.className = "message " + type;
+            msg.innerText = text;
+            div.appendChild(msg);
+            div.scrollTop = div.scrollHeight;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById("message-input");
+            const text = input.value.trim();
+            if (!text || !currentContact || !ws) return;
+            ws.send(JSON.stringify({to: currentContact, message: text}));
+            addMessage(text, "out");
+            input.value = "";
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = "/static/index.html";
+        }
+
+        renderContacts();
+        connectWS();
+    </script>
+</body>
+</html>
