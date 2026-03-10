@@ -266,7 +266,8 @@
 
         function openChat(contact) {
             currentContact = contact;
-            document.getElementById("chat-header").innerText = contact;
+            const c = contacts.find(c => c.email === contact);
+            document.getElementById("chat-header").innerText = c ? c.username : contact;
             document.getElementById("messages").innerHTML = "";
             renderContacts();
             loadHistory(contact);
