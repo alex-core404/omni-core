@@ -56,3 +56,8 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
             )
     except WebSocketDisconnect:
         await manager.disconnect(user_email)
+
+@router.get("/online/{user_email}")
+async def check_online(user_email: str):
+    result = await redis_client.get(f"online:{user_email}")
+    return {"online": result is not None}

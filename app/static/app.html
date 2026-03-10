@@ -168,10 +168,46 @@
             contacts.forEach(c => {
                 const el = document.createElement("div");
                 el.className = "contact" + (c === currentContact ? " active" : "");
-                el.innerText = c;
-                el.onclick = () => openChat(c);
+            
+                const dot = document.createElement("span");
+                dot.style.cssText = "width:8px;height:8px;border-radius:50%;background:#444;margin-right:8px;flex-shrink:0;";
+                dot.id = `dot-${c.replace('@','_').replace('.','_')}`;
+
+                const name = document.createElement("span");
+                name.innerText = c;
+                name.onclick = () => openChat(c);
+                name.style.flex = "1";
+
+                el.appendChild(dot);
+            
+                const del = document.createElement("button");
+                del.innerText = "✕";
+                del.style.cssText = "background:none;border:none;color:#888;cursor:pointer;font-size:12px;";
+                del.onclick = (e) => { e.stopPropagation(); deleteContact(c); };
+                
+                el.style.display = "flex";
+                el.style.alignItems = "center";
+                el.appendChild(name);
+                el.appendChild(del);
                 div.appendChild(el);
             });
+        }
+
+        async function updateOnlineStatus() {
+            for (const c of contacts) {
+                const res = await fetch(`${API}/online/${c}`);
+                const data = await res.json();
+                const id = `dot-${c.replace('@','_').replace('.','_')}`;
+                const dot = document.getElementById(id);
+                if (dot) dot.style.background = data.online ? "#44ff44" : "#444";
+            }
+        }
+
+        async function deleteContact(contact) {
+            await fetch(`${API}/contacts/delete?owner_email=${email}&contact_email=${contact}`, {
+                method: "DELETE"
+            });
+            await loadContacts();
         }
 
         async function addContact() {
@@ -243,6 +279,8 @@
 
         
         loadContacts();
+        updateOnlineStatus();
+        setInterval(updateOnlineStatus, 5000);
         connectWS();
     </script>
 </body>
