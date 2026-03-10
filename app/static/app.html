@@ -125,12 +125,13 @@
     <div class="sidebar">
         <div class="sidebar-header">
             <span id="my-email" style="font-size:13px;color:#888;"></span>
+            <button class="logout" onclick="window.location.href='/static/profile.html'" style="margin-right:8px;">Профиль</button>
             <button class="logout" onclick="logout()">Выйти</button>
         </div>
         <div style="padding:12px 20px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:1px;">Контакты</div>
         <div class="contacts" id="contacts"></div>
         <div class="add-contact">
-            <input id="new-contact" placeholder="Email контакта" />
+            <input id="new-contact" placeholder="Логин контакта" />
             <button onclick="addContact()">+</button>
         </div>
     </div>
@@ -170,19 +171,19 @@
             div.innerHTML = "";
             contacts.forEach(c => {
                 const el = document.createElement("div");
-                el.className = "contact" + (c === currentContact ? " active" : "");
+                el.className = "contact" + (c.email === currentContact ? " active" : "");
             
                 const dot = document.createElement("span");
                 dot.style.cssText = "width:8px;height:8px;border-radius:50%;background:#444;margin-right:8px;flex-shrink:0;";
-                dot.id = `dot-${c.replace('@','_').replace('.','_')}`;
+                dot.id = `dot-${c.email.replace('@','_').replace('.','_')}`;
 
                 const name = document.createElement("span");
-                name.innerText = c;
-                name.onclick = () => openChat(c);
+                name.innerText = c.username;
+                name.onclick = () => openChat(c.email);
                 name.style.flex = "1";
 
                 const badge = document.createElement("span");
-                badge.id = `badge-${c.replace('@','_').replace(/\./g,'_')}`;
+                badge.id = `badge-${c.email.replace('@','_').replace(/\./g,'_')}`;
                 badge.style.cssText = "background:#ff4444;color:#fff;border-radius:10px;padding:2px 7px;font-size:11px;display:none;margin-right:6px;";
 
                 el.appendChild(dot);
@@ -190,7 +191,7 @@
                 const del = document.createElement("button");
                 del.innerText = "✕";
                 del.style.cssText = "background:none;border:none;color:#888;cursor:pointer;font-size:12px;";
-                del.onclick = (e) => { e.stopPropagation(); deleteContact(c); };
+                del.onclick = (e) => { e.stopPropagation(); deleteContact(c.email); };
                 
                 el.style.display = "flex";
                 el.style.alignItems = "center";
@@ -207,10 +208,10 @@
             });
             const counts = await res.json();
             contacts.forEach(c => {
-                const id = `badge-${c.replace(`@`,`_`).replace(/\./g,`_`)}`;
+                const id = `badge-${c.email.replace(`@`,`_`).replace(/\./g,`_`)}`;
                 const badge = document.getElementById(id);
                 if (!badge) return;
-                const count = counts[c] || 0;
+                const count = counts[c.email] || 0;
                 if (count > 0) {
                     badge.innerText = count;
                     badge.style.display = "inline";
@@ -223,9 +224,9 @@
 
         async function updateOnlineStatus() {
             for (const c of contacts) {
-                const res = await fetch(`${API}/online/${c}`);
+                const res = await fetch(`${API}/online/${c.email}`);
                 const data = await res.json();
-                const id = `dot-${c.replace('@','_').replace('.','_')}`;
+                const id = `dot-${c.email.replace('@','_').replace('.','_')}`;
                 const dot = document.getElementById(id);
                 if (dot) dot.style.background = data.online ? "#44ff44" : "#444";
             }
@@ -242,8 +243,20 @@
 
         async function addContact() {
             const val = document.getElementById("new-contact").value.trim();
-            if (!val || contacts.includes(val)) return;
-            await fetch(`${API}/contacts/add?owner_email=${email}&contact_email=${val}`, {
+            if (!val) return;
+            const userRes = await fetch(`${API}/auth/user/${val}`, {
+                headers: {"Authorization": `Bearer ${token}`}
+            });
+            if (!userRes.ok) {
+                alert("Пользователь не найден");
+                return;
+            }
+            const userData = await userRes.json();
+            if (contacts.find(c => c.email === userData.email)) {
+                alert("Контакт уже добавлен");
+                return;
+            }
+            await fetch(`${API}/contacts/add?owner_email=${email}&contact_email=${userData.email}`, {
                 method: "POST",
                 headers: {"Authorization": `Bearer ${token}`}
             });
@@ -277,7 +290,7 @@
             ws = new WebSocket(`ws://5.42.110.162:8000/ws/${email}`);
             ws.onmessage = async function(event) {
                 const data = JSON.parse(event.data);
-                if (!contacts.includes(data.from)) {
+                if (!contacts.find(c => c.email === data.from)) {
                     await fetch(`${API}/contacts/add?owner_email=${email}&contact_email=${data.from}`, {
                         method: "POST",
                         headers: {"Authorization": `Bearer ${token}`}

@@ -66,4 +66,25 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+@router.post("/set-username")
+async def set_username(username: str, current_user: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    if len(username) <4 or len(username) > 20:
+        raise HTTPException(status_code=400, detail="Логин от 4 до 20 символов")
+    existing = db.query(User).filter(User.username == username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Логин уже занят")
+    user = db.query(User).filter(User.email == current_user).first()
+    user.username = username
+    db.commit()
+    return {"status": "ok", "username": username}
+
+@router.get("/user/{username}")
+async def get_user_by_username(username: str, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"email": user.email, "username": user.username}
+     
+
+
     
