@@ -80,6 +80,7 @@
             });
             if (res.ok) {
                 msg.style.display = "block";
+                localStorage.setItem("username", username);
             } else {
                 const data = await res.json();
                 err.innerText = data.detail;

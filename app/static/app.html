@@ -124,7 +124,7 @@
 <body>
     <div class="sidebar">
         <div class="sidebar-header">
-            <span id="my-email" style="font-size:13px;color:#888;"></span>
+            <span id="my-username" style="font-size:13px;color:#ccc;"></span>
             <button class="logout" onclick="window.location.href='/static/profile.html'" style="margin-right:8px;">Профиль</button>
             <button class="logout" onclick="logout()">Выйти</button>
         </div>
@@ -152,7 +152,7 @@
 
         if (!token) window.location.href = "/static/index.html";
 
-        document.getElementById("my-email").innerText = email;
+        document.getElementById("my-username").innerText = "@" + (localStorage.getItem("username") || email);
 
         let ws;
         let currentContact = null;
