@@ -30,6 +30,8 @@ def create_access_token(data: dict) -> str:
 
 @router.post("/register", response_model=UserResponse)
 async def register(user: UserCreate, db: Session = Depends(get_db)):
+    if not user.password or len(user.password) < 6:
+        raise HTTPException(status_code=400, detail="Пароль минимум 6 символов")
     existing_user = db.query(User).filter(User.email == user.email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
