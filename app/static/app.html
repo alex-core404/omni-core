@@ -154,7 +154,13 @@
 
         let ws;
         let currentContact = null;
-        let contacts = JSON.parse(localStorage.getItem("contacts") || "[]");
+        let contacts = [];
+
+        async function loadContacts() {
+            const res = await fetch(`${API}/contacts/${email}`);
+            contacts = await res.json();
+            renderContacts();
+        }
 
         function renderContacts() {
             const div = document.getElementById("contacts");
@@ -168,14 +174,14 @@
             });
         }
 
-        function addContact() {
+        async function addContact() {
             const val = document.getElementById("new-contact").value.trim();
-            if (val && !contacts.includes(val)) {
-                contacts.push(val);
-                localStorage.setItem("contacts", JSON.stringify(contacts));
-                renderContacts();
-                document.getElementById("new-contact").value = "";
-            }
+            if (!val || contacts.includes(val)) return;
+            await fetch(`${API}/contacts/add?owner_email=${email}&contact_email=${val}`, {
+                method: "POST"
+            });
+            await loadContacts();
+            document.getElementById("new-contact").value = "";
         }
 
         function openChat(contact) {
@@ -196,12 +202,13 @@
 
         function connectWS() {
             ws = new WebSocket(`ws://5.42.110.162:8000/ws/${email}`);
-            ws.onmessage = function(event) {
+            ws.onmessage = async function(event) {
                 const data = JSON.parse(event.data);
                 if (!contacts.includes(data.from)) {
-                    contacts.push(data.from);
-                    localStorage.setItem("contacts", JSON.stringify(contacts));
-                    renderContacts();
+                    await fetch(`${API}/contacts/add?owner_email=${email}&contact_email=${data.from}`, {
+                        method: "POST"
+                    });
+                    await loadContacts();
                 }
                 if (data.from === currentContact) {
                     addMessage(data.message, "in");
@@ -233,7 +240,8 @@
             window.location.href = "/static/index.html";
         }
 
-        renderContacts();
+        
+        loadContacts();
         connectWS();
     </script>
 </body>

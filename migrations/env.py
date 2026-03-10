@@ -6,6 +6,7 @@ from sqlalchemy import pool
 from alembic import context
 from app.models.user import User
 from app.models.message import Message
+from app.models.contact import Contact
 from app.database import Base
 
 target_metadata = Base.metadata

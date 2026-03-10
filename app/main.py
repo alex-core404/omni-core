@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from app.routers import auth, chat, history, admin
+from app.routers import auth, chat, history, admin, contacts
 
 app = FastAPI()
 
@@ -10,6 +10,7 @@ app.include_router(auth.router)
 app.include_router(chat.router)
 app.include_router(history.router)
 app.include_router(admin.router)
+app.include_router(contacts.router)
 
 @app.get("/")
 async def root():
