@@ -26,3 +26,35 @@ async def get_history(user1: str, user2: str, current_user: str = Depends(get_cu
         for msg in messages
     ]
 
+@router.get("/unread/{user_email}")
+async def get_unread(user_email: str, current_user: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user != user_email:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    messages = db.query(Message).filter(
+        Message.recipient_email == user_email,
+        Message.is_read == False
+    ).all()
+
+    counts = {}
+    for msg in messages:
+        counts[msg.sender_email] = counts.get(msg.sender_email, 0) + 1
+
+    return counts
+@router.post("/read/{user_email}/{contact_email}")
+async def mark_as_read(user_email: str, contact_email: str, current_user: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user != user_email:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    db.query(Message).filter(
+        Message.recipient_email == user_email,
+        Message.sender_email == contact_email,
+        Message.is_read == False
+    ).update({"is_read": True})
+    db.commit()
+    return {"status": "ok"}
+
+
+
+
+
