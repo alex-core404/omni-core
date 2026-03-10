@@ -236,7 +236,8 @@
         }
 
         function logout() {
-            localStorage.clear();
+            localStorage.removeItem("token");
+            localStorage.removeItem("email");
             window.location.href = "/static/index.html";
         }
 
