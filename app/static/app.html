@@ -198,6 +198,11 @@
             ws = new WebSocket(`ws://5.42.110.162:8000/ws/${email}`);
             ws.onmessage = function(event) {
                 const data = JSON.parse(event.data);
+                if (!contacts.includes(data.from)) {
+                    contacts.push(data.from);
+                    localStorage.setItem("contacts", JSON.stringify(contacts));
+                    renderContacts();
+                }
                 if (data.from === currentContact) {
                     addMessage(data.message, "in");
                 }
