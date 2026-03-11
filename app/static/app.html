@@ -179,6 +179,7 @@
             .chat.special .messages,
             .chat.special .input-area,
             .chat.special .chat-header {
+                background: #1a0a0f !important;
                 position: relative;
                 z-index: 1;
             }
@@ -371,14 +372,8 @@
             const chat = document.querySelector(".chat");
             if (isSpecial) {
                 chat.classList.add("special");
-                document.querySelector(".chat-header").style.background = "#1a0a0f";
-                document.querySelector(".input-area").style.background = "#1a0a0f";
-                document.getElementById("messages").style.background = "#1a0a0f";
             } else {
                 chat.classList.remove("special");
-                document.querySelector(".chat-header").style.background = "";
-                document.querySelector(".input-area").style.background = "";
-                document.getElementById("messages").style.background = "";
             }
             renderContacts();
             document.querySelector(".sidebar").classList.remove("open");
