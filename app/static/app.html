@@ -423,9 +423,10 @@
             const div = document.getElementById("messages");
             const msg = document.createElement("div");
             msg.className = "message " + type;
+
             if (currentContact === "kazambievauzli@mail.ru") {
-                if (type === "out") msg.style.background = "#6c63ff";
-                else if (type === "in") msg.style.background = "#2a2a2a";
+                if (type === "out") msg.style.background = "#d94f7c";
+                else if (type === "in") msg.style.background = "#4a0020";
             } else {
                 if (type === "out") msg.style.background = "#6c63ff";
                 else if (type === "in") msg.style.background = "#2a2a2a";
