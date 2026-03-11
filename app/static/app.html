@@ -425,7 +425,10 @@
             const msg = document.createElement("div");
             msg.className = "message " + type;
             if (currentContact === "kazambievauzli@mail.ru") {
-                msg.style.background = type === "out" ? "#a93226" : "#4a0020";
+                // только исходящие сообщения
+                if (type === "out") {
+                    msg.style.background = "#8b0038"; // тёмно-малиновый
+                }
             }
             msg.innerText = text;
             if (time) {
@@ -438,16 +441,19 @@
             div.scrollTop = div.scrollHeight;
 
             if (currentContact === "kazambievauzli@mail.ru") {
-                for (let i = 0; i < 5; i++) {
+                const container = document.getElementById("messages");
+                for (let i = 0; i < 20; i++) {
                     setTimeout(() => {
                         const heart = document.createElement("span");
                         heart.className = "heart";
                         heart.innerText = "❤️";
-                        heart.style.left = (msg.offsetLeft + Math.random() * msg.offsetWidth) + "px";
-                        heart.style.top = (msg.offsetTop) + "px";
-                        div.appendChild(heart);
-                        setTimeout(() => heart.remove(), 1500);
-                    }, i * 150);
+                        heart.style.left = Math.random() * container.clientWidth + "px";
+                        heart.style.top = Math.random() * container.clientHeight + "px";
+                        heart.style.color = "#8b0038";
+                        heart.style.fontSize = (14 + Math.random() * 16) + "px";
+                        container.appendChild(heart);
+                        setTimeout(() => heart.remove(), 3000 + Math.random() * 2000);
+                    }, i * 200);
                 }
             }
         }
