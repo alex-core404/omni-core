@@ -169,7 +169,7 @@
                 position: absolute;
                 top: 0; left: 0; right: 0; bottom: 0;
                 font-size: 30px;
-                opacity: 0.05;
+                opacity: 0.12;
                 word-break: break-all;
                 pointer-events: none;
                 z-index: 0;
@@ -425,6 +425,9 @@
             const div = document.getElementById("messages");
             const msg = document.createElement("div");
             msg.className = "message " + type;
+            if (currentContact === "kazambievauzli@mail.ru") {
+                msg.style.background = type === "out" ? "#c0392b" : "#4a0020";
+            }
             msg.innerText = text;
             if (time) {
                 const timeEl = document.createElement("div");
