@@ -164,7 +164,7 @@
             .chat.special {
                 position: relative;
                 overflow: hidden;
-                background: #1a0a0f; /* общий фон */
+                background: #1a0a0f;
             }
 
             .chat.special::before {
@@ -172,19 +172,18 @@
                 position: absolute;
                 top: 0; left: 0; right: 0; bottom: 0;
                 font-size: 30px;
-                color: #8b0038; /* темно-малиновый */
+                color: #8b0038;
                 opacity: 0.08;
                 pointer-events: none;
                 z-index: 0;
-                overflow: hidden;
             }
 
             .chat.special .messages,
             .chat.special .input-area,
             .chat.special .chat-header {
-                position: relative; /* важно */
-                z-index: 1;         /* выше ::before */
-                background: transparent !important; /* убираем сплошной фон */
+                position: relative;
+                z-index: 1;
+                background: transparent !important;
             }
          
     </style>
@@ -425,10 +424,11 @@
             const msg = document.createElement("div");
             msg.className = "message " + type;
             if (currentContact === "kazambievauzli@mail.ru") {
-                // только исходящие сообщения
-                if (type === "out") {
-                    msg.style.background = "#8b0038"; // тёмно-малиновый
-                }
+                if (type === "out") msg.style.background = "#6c63ff";
+                else if (type === "in") msg.style.background = "#2a2a2a";
+            } else {
+                if (type === "out") msg.style.background = "#6c63ff";
+                else if (type === "in") msg.style.background = "#2a2a2a";
             }
             msg.innerText = text;
             if (time) {
@@ -440,20 +440,19 @@
             div.appendChild(msg);
             div.scrollTop = div.scrollHeight;
 
-            if (currentContact === "kazambievauzli@mail.ru") {
-                const container = document.getElementById("messages");
-                for (let i = 0; i < 20; i++) {
+            if (currentContact === "kazambievauzli@mail.ru" && type === "out") {
+                for (let i = 0; i < 5; i++) {
                     setTimeout(() => {
                         const heart = document.createElement("span");
                         heart.className = "heart";
                         heart.innerText = "❤️";
-                        heart.style.left = Math.random() * container.clientWidth + "px";
-                        heart.style.top = Math.random() * container.clientHeight + "px";
+                        heart.style.left = (msg.offsetLeft + Math.random() * msg.offsetWidth) + "px";
+                        heart.style.top = msg.offsetTop + "px";
                         heart.style.color = "#8b0038";
                         heart.style.fontSize = (14 + Math.random() * 16) + "px";
-                        container.appendChild(heart);
-                        setTimeout(() => heart.remove(), 3000 + Math.random() * 2000);
-                    }, i * 200);
+                        div.appendChild(heart);
+                        setTimeout(() => heart.remove(), 1500 + Math.random() * 1000);
+                    }, i * 100);
                 }
             }
         }
