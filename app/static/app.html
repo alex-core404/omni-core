@@ -163,6 +163,7 @@
             }
             .chat.special {
                 position: relative;
+                overflow: hidden;
             }
             .chat.special::before {
                 content: "❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️";
@@ -426,7 +427,7 @@
             const msg = document.createElement("div");
             msg.className = "message " + type;
             if (currentContact === "kazambievauzli@mail.ru") {
-                msg.style.background = type === "out" ? "#c0392b" : "#4a0020";
+                msg.style.background = type === "out" ? "#a93226" : "#4a0020";
             }
             msg.innerText = text;
             if (time) {
