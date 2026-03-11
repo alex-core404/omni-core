@@ -148,7 +148,40 @@
             .messages {
                 padding-top: 80px;
             }
-        } 
+        }
+
+            @keyframes float-heart {
+                0% { opacity: 1; transform: translateY(0) scale(1); }
+                100% { opacity: 0; transform: translateY(-80px) scale(1.5); }
+            }
+            .heart {
+                position: absolute;
+                font-size: 16px;
+                animation: float-heart 1.5s ease forwards;
+                pointer-events: none;
+                z-index: 999;
+            }
+            .chat.special {
+                position: relative;
+            }
+            .chat.special::before {
+                content: "❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️";
+                position: absolute;
+                top: 0; left: 0; right: 0; bottom: 0;
+                font-size: 30px;
+                opacity: 0.05;
+                word-break: break-all;
+                pointer-events: none;
+                z-index: 0;
+                overflow: hidden;
+            }
+            .chat.special .messages,
+            .chat.special .input-area,
+            .chat.special .chat-header {
+                position: relative;
+                z-index: 1;
+            }
+         
     </style>
 </head>
 <body>
@@ -333,6 +366,19 @@
             headerDot.style.display = "inline-block";
             headerDot.style.background = "#444";
             document.getElementById("messages").innerHTML = "";
+            const isSpecial = contact === "kazambievauzli@mail.ru";
+            const chat = document.querySelector(".chat");
+            if (isSpecial) {
+                chat.classList.add("special");
+                document.querySelector(".chat-header").style.background = "#1a0a0f";
+                document.querySelector(".input-area").style.background = "#1a0a0f";
+                document.getElementById("messages").style.background = "#1a0a0f";
+            } else {
+                chat.classList.remove("special");
+                document.querySelector(".chat-header").style.background = "";
+                document.querySelector(".input-area").style.background = "";
+                document.getElementById("messages").style.background = "";
+            }
             renderContacts();
             document.querySelector(".sidebar").classList.remove("open");
             loadHistory(contact);
@@ -388,6 +434,20 @@
             }
             div.appendChild(msg);
             div.scrollTop = div.scrollHeight;
+
+            if (currentContact === "kazambievauzli@mail.ru") {
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => {
+                        const heart = document.createElement("span");
+                        heart.className = "heart";
+                        heart.innerText = "❤️";
+                        heart.style.left = (msg.offsetLeft + Math.random() * msg.offsetWidth) + "px";
+                        heart.style.top = (msg.offsetTop) + "px";
+                        div.appendChild(heart);
+                        setTimeout(() => heart.remove(), 1500);
+                    }, i * 150);
+                }
+            }
         }
 
         let typingTimeout = null;
