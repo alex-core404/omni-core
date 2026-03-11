@@ -84,6 +84,11 @@ async def get_user_by_username(username: str, current_user = Depends(get_current
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return {"email": user.email, "username": user.username}
+
+@router.get("/me")
+async def get_me(current_user: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == current_user).first()
+    return {"email": user.email, "username": user.username}    
      
 
 

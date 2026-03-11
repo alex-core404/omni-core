@@ -180,6 +180,17 @@
         if (!token) window.location.href = "/static/index.html";
 
         document.getElementById("my-username").innerText = "@" + (localStorage.getItem("username") || email);
+        if (!localStorage.getItem("username")) {
+            fetch(`${API}/auth/me`, {
+                headers: {"Authorization": `Bearer ${token}`}
+            }).then(r => r.json()).then(data => {
+                if (data.username) {
+                    localStorage.setItem("username", data.username);
+                    document.getElementById("my-username").innerText = "@" + data.username;
+                }
+            });
+        }
+        
 
         let ws;
         let currentContact = null;
@@ -211,7 +222,10 @@
 
                 const name = document.createElement("span");
                 name.innerText = c.username;
-                name.onclick = () => openChat(c.email);
+                name.onclick = () => {
+                    openChat(c.email);
+                    document.querySelector(".sidebar").classList.remove("open");
+                };
                 name.style.flex = "1";
 
                 const badge = document.createElement("span");
@@ -302,7 +316,7 @@
             document.getElementById("chat-title").innerText = c ? c.username : contact;
             document.getElementById("messages").innerHTML = "";
             renderContacts();
-            document.querySelector(".sidebar").classList.remowe("open");
+            document.querySelector(".sidebar").classList.remove("open");
             loadHistory(contact);
             fetch(`${API}/read/${email}/${contact}`, {
                 method: "POST",
