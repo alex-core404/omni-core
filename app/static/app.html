@@ -164,6 +164,7 @@
     <div class="chat">
         <div class="chat-header" id="chat-header">
             <button id="menu-btn" onclick="toggleSidebar()" style="display:none;background:none;border:none;color:#fff;font-size:20px;cursor:pointer;margin-right:12px;">☰</button>
+            <span id="header-dot" style="width:8px;height:8px;border-radius:50%;background:#444;margin-right:8px;display:none;flex-shrink:0;"></span>
             <span id="chat-title">Выберите контакт</span>
         </div>
         <div class="messages" id="messages"></div>
@@ -276,6 +277,11 @@
                 const id = `dot-${c.email.replace('@','_').replace('.','_')}`;
                 const dot = document.getElementById(id);
                 if (dot) dot.style.background = data.online ? "#44ff44" : "#444";
+                if (currentContact) {
+                    const res = await fetch(`${API}/online/${currentContact}`);
+                    const data = await res.json();
+                    document.getElementById("header-dot").style.background = data.online ? "#44ff44" : "#444";
+                }
             }
         }
 
@@ -315,6 +321,9 @@
             currentContact = contact;
             const c = contacts.find(c => c.email === contact);
             document.getElementById("chat-title").innerText = c ? c.username : contact;
+            const headerDot = document.getElementById("header-dot");
+            headerDot.style.display = "inline-block";
+            headerDot.style.background = "#444";
             document.getElementById("messages").innerHTML = "";
             renderContacts();
             document.querySelector(".sidebar").classList.remove("open");
