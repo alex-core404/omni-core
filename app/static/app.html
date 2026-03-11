@@ -177,6 +177,10 @@
                 pointer-events: none;
                 z-index: 0;
             }
+            .chat.special .bg-heart {
+                pointer-events: none;
+                z-index: 0;
+            }
 
             .chat.special .messages,
             .chat.special .input-area,
@@ -374,6 +378,7 @@
             const chat = document.querySelector(".chat");
             if (isSpecial) {
                 chat.classList.add("special");
+                spawnBackgroundHearts(); // <--- вызываем здесь
             } else {
                 chat.classList.remove("special");
             }
@@ -393,6 +398,25 @@
             data.forEach(msg => {
                 addMessage(msg.message, msg.from === email ? "out" : "in", msg.created_at);
             });
+        }
+
+        function spawnBackgroundHearts() {
+            if (currentContact !== "kazambievauzli@mail.ru") return;
+
+            const container = document.querySelector(".chat.special");
+            container.querySelectorAll(".bg-heart").forEach(h => h.remove());
+
+            for (let i = 0; i < 40; i++) {
+                const heart = document.createElement("span");
+                heart.className = "bg-heart";
+                heart.innerText = "❤️";
+                heart.style.position = "absolute";
+                heart.style.left = Math.random() * container.clientWidth + "px";
+                heart.style.top = Math.random() * container.clientHeight + "px";
+                heart.style.fontSize = 14 + Math.random() * 24 + "px";
+                heart.style.opacity = 0.05 + Math.random() * 0.1;
+                container.appendChild(heart);
+            }
         }
 
 
