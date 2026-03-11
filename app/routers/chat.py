@@ -40,6 +40,13 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
             data = await websocket.receive_text()
             message_data = json.loads(data)
             
+            if message_data.get("type") == "typing":
+                if message_data["to"] in manager.active_connections:
+                    await manager.active_connections[message_data["to"]].send_text(
+                        json.dumps({"type": "typing", "from": user_email})
+                    )
+                continue
+
             db_message = Message(
                 sender_email=user_email,
                 recipient_email=message_data["to"],

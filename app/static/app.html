@@ -171,10 +171,13 @@
             <button id="menu-btn" onclick="toggleSidebar()" style="display:none;background:none;border:none;color:#fff;font-size:20px;cursor:pointer;margin-right:12px;">☰</button>
             <span id="header-dot" style="width:8px;height:8px;border-radius:50%;background:#444;margin-right:8px;display:none;flex-shrink:0;"></span>
             <span id="chat-title">Выберите контакт</span>
+            <span id="typing-indicator" style="font-size:12px;color:#888;margin-left:8px;display:none;">печатает...</span>
         </div>
         <div class="messages" id="messages"></div>
         <div class="input-area">
-            <input id="message-input" placeholder="Сообщение..." onkeydown="if(event.key==='Enter') sendMessage()" />
+            <input id="message-input" placeholder="Сообщение..." 
+                onkeydown="if(event.key==='Enter') sendMessage()"
+                oninput="onTyping()" />
             <button onclick="sendMessage()">→</button>
         </div>
     </div>
@@ -360,7 +363,12 @@
                     });
                     await loadContacts();
                 }
-                if (data.from === currentContact) {
+                if (data.type === "typing" && data.from === currentContact) {
+                    const indicator = document.getElementById("typing-indicator");
+                    indicator.style.display = "inline";
+                    clearTimeout(typingTimeout);
+                    typingTimeout = setTimeout(() => indicator.style.display = "none", 3000);
+                } else if (data.from === currentContact) {
                     addMessage(data.message, "in");
                 }
             };
@@ -380,6 +388,13 @@
             }
             div.appendChild(msg);
             div.scrollTop = div.scrollHeight;
+        }
+
+        let typingTimeout = null;
+
+        function onTyping() {
+            if (!currentContact || !ws) return;
+            ws.send(JSON.stringify({type: "typing", to: currentContact}));
         }
 
         function sendMessage() {
