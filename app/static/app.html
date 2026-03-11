@@ -164,24 +164,27 @@
             .chat.special {
                 position: relative;
                 overflow: hidden;
+                background: #1a0a0f; /* общий фон */
             }
+
             .chat.special::before {
                 content: "❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️ ❤️";
                 position: absolute;
                 top: 0; left: 0; right: 0; bottom: 0;
                 font-size: 30px;
-                opacity: 0.12;
-                word-break: break-all;
+                color: #8b0038; /* темно-малиновый */
+                opacity: 0.08;
                 pointer-events: none;
                 z-index: 0;
                 overflow: hidden;
             }
+
             .chat.special .messages,
             .chat.special .input-area,
             .chat.special .chat-header {
-                background: #1a0a0f !important;
-                position: relative;
-                z-index: 1;
+                position: relative; /* важно */
+                z-index: 1;         /* выше ::before */
+                background: transparent !important; /* убираем сплошной фон */
             }
          
     </style>
