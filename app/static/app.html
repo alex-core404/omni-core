@@ -414,6 +414,10 @@
                 method: "POST",
                 headers: {"Authorization": `Bearer ${token}`}
             });
+            if (ws) {
+                ws.send(JSON.stringify({type: "read", to: contact}));
+            }
+            
         }
 
         async function loadHistory(contact) {
@@ -466,7 +470,13 @@
                     typingTimeout = setTimeout(() => indicator.style.display = "none", 3000);
                 } else if (data.from === currentContact) {
                     addMessage(data.message, "in", null, data.id);
+                } else if (data.type === "read" && data.from === currentContact) {
+                    document.querySelectorAll(".tick") .forEach(tick => {
+                        tick.innerText = "✓✓";
+                        tick.style.color = "#6c63ff";
+                    });
                 }
+            
             };
             ws.onclose = () => setTimeout(connectWS, 3000);
         }
