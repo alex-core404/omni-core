@@ -24,10 +24,10 @@ class ConnectionManager:
         self.active_connections.pop(user_email, None)
         await redis_client.delete(f"online:{user_email}")
 
-    async def send_message(self, message: str, sender: str, recipient: str):
+    async def send_message(self, message: str, sender: str, recipient: str, msg_id: int):
         if recipient in self.active_connections:
             await self.active_connections[recipient].send_text(
-                json.dumps({"from": sender, "message": decrypt_message(message)})
+                json.dumps({"from": sender, "message": decrypt_message(message), "id": msg_id})
             )
 
 manager = ConnectionManager()
@@ -54,12 +54,13 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
             )
             db.add(db_message)
             db.commit()
-            print(f"Сообщение сохранено: {user_email} -> {message_data['to']}")
+            db.refresh(db_message)
             
             await manager.send_message(
                 message=encrypt_message(message_data["message"]),
                 sender=user_email,
-                recipient=message_data["to"]
+                recipient=message_data["to"],
+                msg_id=db_message.id
             )
     except WebSocketDisconnect:
         await manager.disconnect(user_email)

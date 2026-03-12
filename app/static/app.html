@@ -422,7 +422,7 @@
             });
             const data = await res.json();
             data.forEach(msg => {
-                addMessage(msg.message, msg.from === email ? "out" : "in", msg.created_at);
+                addMessage(msg.message, msg.from === email ? "out" : "in", msg.created_at, msg.id);
             });
         }
 
@@ -465,7 +465,7 @@
                     clearTimeout(typingTimeout);
                     typingTimeout = setTimeout(() => indicator.style.display = "none", 3000);
                 } else if (data.from === currentContact) {
-                    addMessage(data.message, "in");
+                    addMessage(data.message, "in", null, data.id);
                 }
             };
             ws.onclose = () => setTimeout(connectWS, 3000);
@@ -480,7 +480,7 @@
         }
         
 
-        function addMessage(text, type, time = null) {
+        function addMessage(text, type, time = null, msgId = null) {
             const div = document.getElementById("messages");
             const msg = document.createElement("div");
             msg.className = "message " + type;
@@ -508,7 +508,26 @@
                 msg.innerText = text;
             }
             
+            const meta = document.createElement("div");
+            meta.style.cssText = `font-size:11px;margin-top:4px;display:flex;align-items:center;justify-content:${type === 'out' ? 'flex-end' : 'flex-start'};gap:4px;`;
+            
+            if (time) {
+                const timeEl = document.createElement("span");
+                timeEl.style.color = type === 'out' ? '#ccc' : '#888';
+                timeEl.innerText = new Date(time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                meta.appendChild(timeEl);
+            }
 
+            if (type === 'out') {
+                const tick = document.createElement("span");
+                tick.className = `tick`;
+                tick.innerText = "✓";
+                tick.style.color = "#ccc";
+                if(msgId) tick.dataset.id = msgId;
+                meta.appendChild(tick);
+            }
+
+            msg.appendChild(meta);
             div.appendChild(msg);
             div.scrollTop = div.scrollHeight;
 

@@ -19,9 +19,11 @@ async def get_history(user1: str, user2: str, current_user: str = Depends(get_cu
     
     return [
         {
+            "id": msg.id,
             "from": msg.sender_email,
             "message": decrypt_message(msg.content),
-            "created_at": str(msg.created_at)
+            "created_at": str(msg.created_at),
+            "is_read": msg.is_read
         }
         for msg in messages
     ]
