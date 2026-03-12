@@ -471,7 +471,7 @@
                 } else if (data.type === "read" && data.from === currentContact) {
                     document.querySelectorAll(".tick").forEach(tick => {
                         tick.innerText = "✓✓";
-                        tick.style.color = "#6c63ff";
+                        tick.style.color = "#4caf50";
                     });
                 } else if (data.from === currentContact) {
                     addMessage(data.message, "in", null, data.id);
@@ -532,7 +532,7 @@
                 const tick = document.createElement("span");
                 tick.className = "tick";
                 tick.innerText = isRead ? "✓✓" : "✓";
-                tick.style.color = isRead ? "#6c63ff" : "#ccc";
+                tick.style.color = isRead ? "#4caf50" : "#ccc";
                 if (msgId) tick.dataset.id = msgId;
                 meta.appendChild(tick);
             }
