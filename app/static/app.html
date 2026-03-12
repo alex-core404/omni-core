@@ -120,6 +120,25 @@
             cursor: pointer;
             font-size: 13px;
         }
+        .lightbox {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            cursor: zoom-out;
+        }
+        .lightbox.open {
+            display: flex;
+        }
+        .lightbox img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+        }
         @media (max-width: 600px) {
             .sidebar {
                 position: fixed;
@@ -185,7 +204,10 @@
          
     </style>
 </head>
-<body>
+<body> 
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <img id="lightbox-img" src="">
+</div>
     <div class="sidebar">
         <div class="sidebar-header">
             <span id="my-username" style="font-size:13px;color:#ccc;"></span>
@@ -449,6 +471,15 @@
             ws.onclose = () => setTimeout(connectWS, 3000);
         }
 
+        function openLightbox(src) {
+            document.getElementById("lightbox-img").src = src;
+            document.getElementById("lightbox").classList.add("open");
+        }
+        function closeLightbox() {
+            document.getElementById("lightbox").classList.remove("open");
+        }
+        
+
         function addMessage(text, type, time = null) {
             const div = document.getElementById("messages");
             const msg = document.createElement("div");
@@ -469,6 +500,8 @@
                 const img = document.createElement("img");
                 img.src = `${API}${text}`;
                 img.style.cssText = "max-width:100%;border-radius:8px;display:block;";
+                img.style.cursor = "zoom-in";
+                img.onclick = () => openLightbox(img.src);
                 msg.innerText = "";
                 msg.appendChild(img);
             } else {
