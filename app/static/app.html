@@ -375,8 +375,9 @@
                 chat.classList.add("special");
                 spawnBackgroundHearts();
             } else {
-                chat.classList.remove("special");
-                document.querySelectorAll(".bg-heart").forEach(h => h.remove());
+            const hearts = document.querySelectorAll(".bg-heart");
+            console.log("Удаляем сердечек:", hearts.length);
+            hearts.forEach(h => h.remove());
             }
 
             renderContacts();
