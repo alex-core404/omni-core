@@ -376,6 +376,7 @@
                 spawnBackgroundHearts();
             } else {
                 chat.classList.remove("special");
+                chat.querySelectorAll(".bg-heart").forEach(h => h.remove());
             }
 
             renderContacts();
