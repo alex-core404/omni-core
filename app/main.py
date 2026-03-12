@@ -12,6 +12,7 @@ app.include_router(chat.router)
 app.include_router(history.router)
 app.include_router(admin.router)
 app.include_router(contacts.router)
+app.include_router(upload.router)
 
 @app.get("/")
 async def root():

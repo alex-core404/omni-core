@@ -212,6 +212,8 @@
             <input id="message-input" placeholder="Сообщение..." 
                 onkeydown="if(event.key==='Enter') sendMessage()"
                 oninput="onTyping()" />
+            <input type="file" id="file-input" accepts="image/*" multiple style="display:none" onchange="uploadFiles(this.files)"/>
+            <button onclick="document.getElementById('file-input').click()" style="padding:12px;background:#2a2a2a;border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:18px;">📎</button>
             <button onclick="sendMessage()">→</button>
         </div>
     </div>
@@ -376,7 +378,7 @@
                 spawnBackgroundHearts();
             } else {
                 chat.classList.remove("special");
-                chat.style.background = "";  
+                chat.style.background = "";
                 const hearts = document.querySelectorAll(".bg-heart");
                 console.log("Удаляем сердечек:", hearts.length);
                 hearts.forEach(h => h.remove());
@@ -462,14 +464,17 @@
                 else if (type === "in") msg.style.background = "#2a2a2a";
             }
 
-            msg.innerText = text;
 
-            if (time) {
-                const timeEl = document.createElement("div");
-                timeEl.style.cssText = `font-size:11px;color:${type === 'out' ? '#ccc' : '#888'};margin-top:4px;text-align:${type === 'out' ? 'right' : 'left'};`;
-                timeEl.innerText = new Date(time).toLocaleTimeString([], {hour: `2-digit`, minute:`2-digit`});
-                msg.appendChild(timeEl);
+            if (text.startsWith("/uploads/")) {
+                const img = document.createElement("img");
+                img.src = `${API}${text}`;
+                img.style.cssText = "max-width:100%;border-radius:8px;display:block;";
+                msg.innerText = "";
+                msg.appendChild(img);
+            } else {
+                msg.innerText = text;
             }
+            
 
             div.appendChild(msg);
             div.scrollTop = div.scrollHeight;
@@ -495,6 +500,25 @@
         function onTyping() {
             if (!currentContact || !ws) return;
             ws.send(JSON.stringify({type: "typing", to: currentContact}));
+        }
+        
+        async function uploadFiles(files) {
+            if (!currentContact) return;
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append("file", file);
+                const res = await fetch(`${API}/upload`, {
+                    method: "POST",
+                    headers: {"Authorization": `Bearer ${token}`},
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.url) {
+                    ws.send(JSON.stringify({to: currentContact, message: data.url}));
+                    addMessage(data.url, "out");
+                }
+            }
+            document.getElementById("file-input").value = "";
         }
 
         function sendMessage() {
