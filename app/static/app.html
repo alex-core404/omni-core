@@ -370,7 +370,8 @@
 
             const chat = document.querySelector(".chat");
 
-            if (contact === "kazambievauzli@mail.ru") {
+            if ((contact === "kazambievauzli@mail.ru" && email === "asotnikov705@gmail.com") ||
+                (contact === "asotnikov705@gmail.com" && email === "kazambievauzli@mail.ru")) {
                 chat.classList.add("special");
                 spawnBackgroundHearts();
             } else {
@@ -398,7 +399,9 @@
         }
 
         function spawnBackgroundHearts() {
-            if (currentContact !== "kazambievauzli@mail.ru") return;
+            const isSpecial = (currentContact === "kazambievauzli@mail.ru" && email === "asotnikov705@gmail.com") ||
+                  (currentContact === "asotnikov705@gmail.com" && email === "kazambievauzli@mail.ru");
+            if (!isSpecial) return;
 
             const container = document.querySelector(".chat.special");
             container.querySelectorAll(".bg-heart").forEach(h => h.remove());
@@ -445,7 +448,9 @@
             const msg = document.createElement("div");
             msg.className = "message " + type;
 
-            if (currentContact === "kazambievauzli@mail.ru") {
+            const isSpecialChat = (currentContact === "kazambievauzli@mail.ru" && email === "asotnikov705@gmail.com") ||
+                      (currentContact === "asotnikov705@gmail.com" && email === "kazambievauzli@mail.ru");
+            if (isSpecialChat) {
                 if (type === "out") msg.style.background = "#d94f7c";
                 else if (type === "in") msg.style.background = "#4a0020";
             } else {
@@ -465,7 +470,7 @@
             div.appendChild(msg);
             div.scrollTop = div.scrollHeight;
 
-            if (currentContact === "kazambievauzli@mail.ru" && type === "out") {
+            if (isSpecialChat && type === "out") {
                 for (let i = 0; i < 5; i++) {
                     setTimeout(() => {
                         const heart = document.createElement("span");
