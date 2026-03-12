@@ -426,7 +426,7 @@
             });
             const data = await res.json();
             data.forEach(msg => {
-                addMessage(msg.message, msg.from === email ? "out" : "in", msg.created_at, msg.id);
+                addMessage(msg.message, msg.from === email ? "out" : "in", msg.created_at, msg.id, msg.is_read);
             });
         }
 
@@ -468,13 +468,13 @@
                     indicator.style.display = "inline";
                     clearTimeout(typingTimeout);
                     typingTimeout = setTimeout(() => indicator.style.display = "none", 3000);
-                } else if (data.from === currentContact) {
-                    addMessage(data.message, "in", null, data.id);
                 } else if (data.type === "read" && data.from === currentContact) {
-                    document.querySelectorAll(".tick") .forEach(tick => {
+                    document.querySelectorAll(".tick").forEach(tick => {
                         tick.innerText = "✓✓";
                         tick.style.color = "#6c63ff";
                     });
+                } else if (data.from === currentContact) {
+                    addMessage(data.message, "in", null, data.id);
                 }
             
             };
@@ -490,7 +490,7 @@
         }
         
 
-        function addMessage(text, type, time = null, msgId = null) {
+        function addMessage(text, type, time = null, msgId = null, isRead = false) {
             const div = document.getElementById("messages");
             const msg = document.createElement("div");
             msg.className = "message " + type;
@@ -530,10 +530,10 @@
 
             if (type === 'out') {
                 const tick = document.createElement("span");
-                tick.className = `tick`;
-                tick.innerText = "✓";
-                tick.style.color = "#ccc";
-                if(msgId) tick.dataset.id = msgId;
+                tick.className = "tick";
+                tick.innerText = isRead ? "✓✓" : "✓";
+                tick.style.color = isRead ? "#6c63ff" : "#ccc";
+                if (msgId) tick.dataset.id = msgId;
                 meta.appendChild(tick);
             }
 
