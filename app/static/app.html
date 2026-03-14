@@ -201,6 +201,42 @@
                 z-index: 1;
                 background: transparent !important;
             }
+            .reaction-picker {
+                position: absolute;
+                background: #2a2a2a;
+                border-radius: 20px;
+                padding: 6px 10px;
+                display: flex;
+                gap: 6px;
+                z-index: 100;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            }
+            .reaction-picker span {
+                font-size: 20px;
+                cursor: pointer;
+                transition: transform 0.1s;
+            }
+            .reaction-picker span:hover {
+                transform: scale(1.3);
+            }
+            .reactions-bar {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+                margin-top: 4px;
+            }
+            .reaction-btn {
+                background: #2a2a2a;
+                border: none;
+                border-radius: 10px;
+                padding: 2px 7px;
+                font-size: 13px;
+                color: #fff;
+                cursor: pointer;
+            }
+            .reaction-btn:hover {
+                background: #3a3a3a;
+            }
          
     </style>
 </head>
@@ -537,9 +573,33 @@
                 meta.appendChild(tick);
             }
 
+            
+            const reactionsBar = document.createElement("div");
+            reactionsBar.className = "reactions-bar";
+            if (msgId) {
+                reactionsBar.id = `reactions-${msgId}`;
+                loadReactions(msgId);
+            }
+
             msg.appendChild(meta);
+            msg.appendChild(reactionsBar);
             div.appendChild(msg);
             div.scrollTop = div.scrollHeight;
+
+            
+            if (msgId) {
+                let pressTimer;
+                msg.addEventListener("mousedown", () => {
+                    pressTimer = setTimeout(() => showReactionPicker(msgId, msg), 500);
+                });
+                msg.addEventListener("mouseup", () => clearTimeout(pressTimer));
+                msg.addEventListener("mouseleave", () => clearTimeout(pressTimer));
+               
+                msg.addEventListener("touchstart", () => {
+                    pressTimer = setTimeout(() => showReactionPicker(msgId, msg), 500);
+                });
+                msg.addEventListener("touchend", () => clearTimeout(pressTimer));
+            }
 
             if (isSpecialChat && type === "out") {
                 for (let i = 0; i < 5; i++) {
@@ -558,6 +618,57 @@
             }
         }    
         let typingTimeout = null;
+
+        let reactionPickerEl = null;
+
+        function showReactionPicker(msgId, anchorEl) {
+            closeReactionPicker();
+            const picker = document.createElement("div");
+            picker.className = "reaction-picker";
+            ["👍", "❤️", "😂", "😮", "😢", "🔥"].forEach(emoji => {
+                const span = document.createElement("span");
+                span.innerText = emoji;
+                span.onclick = () => {
+                    toggleReaction(msgId, emoji);
+                    closeReactionPicker();
+                };
+                picker.appendChild(span);
+            });
+            anchorEl.style.position = "relative";
+            anchorEl.appendChild(picker);
+            reactionPickerEl = picker;
+            setTimeout(() => document.addEventListener("click", closeReactionPicker, {once: true}), 100);
+        }
+
+        function closeReactionPicker() {
+            if (reactionPickerEl) {
+                reactionPickerEl.remove();
+                reactionPickerEl = null;
+            }
+        }
+
+        async function toggleReaction(msgId, emoji) {
+            await fetch(`${API}/reactions/${msgId}/${encodeURIComponent(emoji)}`, {
+                method: "POST",
+                headers: {"Authorization": `Bearer ${token}`}
+            });
+            await loadReactions(msgId);
+        }
+
+        async function loadReactions(msgId) {
+            const res = await fetch(`${API}/reactions/${msgId}`);
+            const counts = await res.json();
+            const bar = document.getElementById(`reactions-${msgId}`);
+            if (!bar) return;
+            bar.innerHTML = "";
+            Object.entries(counts).forEach(([emoji, count]) => {
+                const btn = document.createElement("button");
+                btn.className = "reaction-btn";
+                btn.innerText = `${emoji} ${count}`;
+                btn.onclick = () => toggleReaction(msgId, emoji);
+                bar.appendChild(btn);
+            });
+        }
 
         function onTyping() {
             if (!currentContact || !ws) return;
