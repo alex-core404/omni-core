@@ -6,6 +6,10 @@ import redis.asyncio as aioredis
 import json
 from app.database import get_db
 from app.models.message import Message
+from groq import Groq
+import os
+
+groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 router = APIRouter()
 
@@ -35,6 +39,25 @@ class ConnectionManager:
                     "reply_to_text": reply_to_text
                 })
             )
+async def ask_ai(user_message: str, context_messages: list, model: str = "llama-3.1-8b-instant", system_prompt: str = "Ты помощник в мессенджере Omni. Отвечай кратко и по делу, максимум 3-5 предложений. Не используй markdown.") -> str:
+    messages = [
+        {
+            "role": "system",
+            "content": system_prompt
+        }
+    ]
+    for msg in context_messages:
+        role = "assistant" if msg["from"] == "ai-bot@omni" else "user"
+        messages.append({"role": role, "content": f"{msg['from']}: {msg['message']}"})
+
+    messages.append({"role": "user", "content": user_message})
+
+    response = groq_client.chat.completions.create(
+        model=model,
+        messages=messages,
+        max_tokens=300
+    )
+    return response.choices[0].message.content
 
 manager = ConnectionManager()
 
@@ -58,6 +81,61 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
                         json.dumps({"type": "read", "from": user_email})
                     )
                 continue
+
+            text = message_data.get("message", "")
+            is_ai = text.startswith("@ai")
+            is_romantic = "*" in text.split()[0] if is_ai else False
+            use_70b = text.startswith("@ai70")
+
+            if is_ai:
+                model = "llama-3.3-70b-versatile" if use_70b else "llama-3.1-8b-instant"
+
+                context_count = 20
+                parts = text.split()
+                for part in parts:
+                    if part.startswith("c:"):
+                        try:
+                            context_count = int(part[2:])
+                        except:
+                            pass
+                
+                history = db.query(Message).filter(
+                    ((Message.sender_email == user_email) & (Message.recipient_email == message_data["to"])) |
+                    ((Message.sender_email == message_data["to"]) & (Message.recipient_email == user_email))
+                ).order_by(Message.created_at.desc()).limit(context_count).all()
+                history.reverse()
+                context = [{"from": m.sender_email, "message": decrypt_message(m.content)} for m in history]
+
+                SPECIAL_PAIR = {
+                    "asotnikov705@gmail.com",
+                    "kazambievauzli@mail.ru"
+                }
+                if is_romantic and user_email in SPECIAL_PAIR and message_data["to"] in SPECIAL_PAIR:
+                    system = "Ты помощник в мессенджере Omni. Отвечай кратко, максимум 3-5 предложений. Не используй markdown. После ответа добавь романтичный PS от Александра для его девушки - каждый раз разный и искренний."
+                else:
+                    system = "Ты помощник в мессенджере Omni. Отвечай кратко и по делу, максимум 3-5 предложений если не просят подробнее. Не используй markdown разметку."
+                    
+                ai_response = await ask_ai(text, context, model, system)
+
+                ai_message = Message(
+                    sender_email="ai-bot@omni",
+                    recipient_email=user_email,
+                    content=encrypt_message(ai_response)
+                )
+                db.add(ai_message)
+                db.commit()
+                db.refresh(ai_message)
+
+                if user_email in manager.active_connections:
+                    await manager.active_connections[user_email].send_text(
+                        json.dumps({
+                            "from": "ai-bot@omni",
+                            "message": ai_response,
+                            "id": ai_message.id
+                        })
+                    )
+                continue
+
 
             reply_to_id = message_data.get("reply_to_id")
             reply_to_text = None
