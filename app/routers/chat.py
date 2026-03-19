@@ -134,7 +134,8 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
                         json.dumps({
                             "from": "ai-bot@omni",
                             "message": ai_response,
-                            "id": ai_message.id
+                            "id": ai_message.id,
+                            "chat_with": message_data["to"]
                         })
                     )
                 continue
