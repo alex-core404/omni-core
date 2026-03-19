@@ -42,7 +42,7 @@ class ConnectionManager:
                     "reply_to_text": reply_to_text
                 })
             )
-async def ask_ai(user_message: str, context_messages: list, model: str = "llama-3.1-8b-instant", system_prompt: str = "Ты помощник в мессенджере Omni. Отвечай кратко и по делу, максимум 3-5 предложений. Не используй markdown.") -> str:
+async def ask_ai(user_message: str, context_messages: list, model: str = "meta-llama/llama-3.1-8b-instruct", system_prompt: str = "Ты помощник в мессенджере Omni. Отвечай кратко и по делу, максимум 3-5 предложений. Не используй markdown.") -> str:
     messages = [
         {
             "role": "system",
@@ -91,7 +91,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
             use_70b = text.startswith("@ai70")
 
             if is_ai:
-                model = "meta-llama/llama-3.3-70b-instruct:free" if use_70b else "meta-llama/llama-3.1-8b-instruct:free"
+                model = "meta-llama/llama-3.3-70b-instruct" if use_70b else "meta-llama/llama-3.1-8b-instruct"
 
                 context_count = 20
                 parts = text.split()
