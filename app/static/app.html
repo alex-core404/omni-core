@@ -533,7 +533,7 @@
             ws = new WebSocket(`ws://5.42.110.162:8000/ws/${email}`);
             ws.onmessage = async function(event) {
                 const data = JSON.parse(event.data);
-                if (!contacts.find(c => c.email === data.from)) {
+                if (!contacts.find(c => c.email === data.from) && data.from !== "ai-bot@omni") {
                     await fetch(`${API}/contacts/add?owner_email=${email}&contact_email=${data.from}`, {
                         method: "POST",
                         headers: {"Authorization": `Bearer ${token}`}
@@ -551,7 +551,7 @@
                         tick.style.color = "#4caf50";
                     });
                 } else if (data.from === "ai-bot@omni" && data.chat_with === currentContact) {
-                    addMessage(data.message, "in", null, data.id, false, null, null);
+                    addMessage(data.message, "in", null, data.id, false, null, null, true);
                 } else if (data.from === currentContact) {
                     addMessage(data.message, "in", null, data.id, false, data.reply_to_id, data.reply_to_text);
                 }
@@ -569,10 +569,17 @@
         }
         
 
-        function addMessage(text, type, time = null, msgId = null, isRead = false, replyId = null, replyText = null) {
+        function addMessage(text, type, time = null, msgId = null, isRead = false, replyId = null, replyText = null, isAi = false) {
             const div = document.getElementById("messages");
             const msg = document.createElement("div");
             msg.className = "message " + type;
+
+            if (isAi) {
+                const aiLabel = document.createElement("div");
+                aiLabel.style.cssText = "font-size:11px;color:#6c63ff;margin-bottom:4px;";
+                aiLabel.innerText = "🤖 Omni AI";
+                msg.appendChild(aiLabel);
+            }
 
             const isSpecialChat = (currentContact === "kazambievauzli@mail.ru" && email === "asotnikov705@gmail.com") ||
                       (currentContact === "asotnikov705@gmail.com" && email === "kazambievauzli@mail.ru");
