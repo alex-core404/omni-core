@@ -6,10 +6,13 @@ import redis.asyncio as aioredis
 import json
 from app.database import get_db
 from app.models.message import Message
-from groq import Groq
+from openai import OpenAI
 import os
 
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+openai_client = OpenAI(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    base_url="https://openrouter.ai/api/v1"
+)
 
 router = APIRouter()
 
@@ -52,7 +55,7 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "llama-
 
     messages.append({"role": "user", "content": user_message})
 
-    response = groq_client.chat.completions.create(
+    response = openai_client.chat.completions.create(
         model=model,
         messages=messages,
         max_tokens=300
@@ -88,7 +91,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
             use_70b = text.startswith("@ai70")
 
             if is_ai:
-                model = "llama-3.3-70b-versatile" if use_70b else "llama-3.1-8b-instant"
+                model = "meta-llama/llama-3.3-70b-instruct:free" if use_70b else "meta-llama/llama-3.1-8b-instruct:free"
 
                 context_count = 20
                 parts = text.split()
