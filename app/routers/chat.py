@@ -124,6 +124,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
                     sender_email="ai-bot@omni",
                     recipient_email=user_email,
                     content=encrypt_message(ai_response)
+                    reply_to_id=None
                 )
                 db.add(ai_message)
                 db.commit()
