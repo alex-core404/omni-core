@@ -24,10 +24,16 @@ class ConnectionManager:
         self.active_connections.pop(user_email, None)
         await redis_client.delete(f"online:{user_email}")
 
-    async def send_message(self, message: str, sender: str, recipient: str, msg_id: int):
+    async def send_message(self, message: str, sender: str, recipient: str, msg_id: int, reply_to_id=None, reply_to_text=None):
         if recipient in self.active_connections:
             await self.active_connections[recipient].send_text(
-                json.dumps({"from": sender, "message": decrypt_message(message), "id": msg_id})
+                json.dumps({
+                    "from": sender, 
+                    "message": decrypt_message(message), 
+                    "id": msg_id,
+                    "reply_to_id": reply_to_id,
+                    "reply_to_text": reply_to_text
+                })
             )
 
 manager = ConnectionManager()
@@ -53,10 +59,18 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
                     )
                 continue
 
+            reply_to_id = message_data.get("reply_to_id")
+            reply_to_text = None
+            if reply_to_id:
+                original = db.query(Message).filter(Message.id == reply_to_id).first()
+                if original:
+                    reply_to_text = decrypt_message(original.content)
+
             db_message = Message(
                 sender_email=user_email,
                 recipient_email=message_data["to"],
-                content=encrypt_message(message_data["message"])
+                content=encrypt_message(message_data["message"]),
+                reply_to_id=reply_to_id
             )
             db.add(db_message)
             db.commit()
@@ -66,7 +80,9 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
                 message=encrypt_message(message_data["message"]),
                 sender=user_email,
                 recipient=message_data["to"],
-                msg_id=db_message.id
+                msg_id=db_message.id,
+                reply_to_id=reply_to_id,
+                reply_to_text=reply_to_text
             )
     except WebSocketDisconnect:
         await manager.disconnect(user_email)
