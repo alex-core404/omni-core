@@ -23,7 +23,7 @@ async def get_history(user1: str, user2: str, current_user: str = Depends(get_cu
             "from": msg.sender_email,
             "message": decrypt_message(msg.content),
             "created_at": str(msg.created_at),
-            "is_read": msg.is_read
+            "is_read": msg.is_read,
             "reply_to_id": msg.reply_to_id,
             "reply_to_text": decrypt_message(
                 db.query(Message).filter(Message.id == msg.reply_to_id).first().content
