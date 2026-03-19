@@ -11,6 +11,6 @@ class Message(Base):
     content = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     is_read = Column(Boolean, default=False)
-    reply_to_id = Column(Integer, ForeignKey("message.id", ondelete="SET NULL"), nullable=True)
-    
+    reply_to_id = Column(Integer, ForeignKey("messages.id", ondelete="SET NULL"), nullable=True)
+
     
