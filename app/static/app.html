@@ -237,6 +237,42 @@
             .reaction-btn:hover {
                 background: #3a3a3a;
             }
+            .reply-preview {
+                background: #1a1a1a;
+                border-left: 3px solid #6c63ff;
+                padding: 6px 10px;
+                border-radius: 4px;
+                font-size: 12px;
+                color: #aaa;
+                margin-bottom: 4px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .reply-preview span {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                max-width: 90%;
+            }
+            .reply-preview button {
+                background: none;
+                border:none;
+                color: #888;
+                cursor: pointer;
+                font-size: 16px;
+                padding: 0;
+                flex-shrink: 0;
+            }
+            .reply-quote {
+                border-left: 3px solid #6c63ff;
+                padding: 4px 8px;
+                margin-bottom: 6px;
+                font-size: 12px;
+                color: #aaa;
+                border-radius: 2px;
+                background: rgba(0,0,0,0.2);
+            }
          
     </style>
 </head>
@@ -266,10 +302,15 @@
             <span id="typing-indicator" style="font-size:12px;color:#888;margin-left:8px;display:none;">печатает...</span>
         </div>
         <div class="messages" id="messages"></div>
-        <div class="input-area">
-            <input id="message-input" placeholder="Сообщение..." 
-                onkeydown="if(event.key==='Enter') sendMessage()"
-                oninput="onTyping()" />
+        <div class="input-area" style="flex-direction:column;">
+            <div id="reply-preview" class="reply-preview" style="display:none;">
+                <span id="reply-preview-text"></span>
+                <button onclick="cancelReply()">x</button>
+            </div>
+            <div style="display:flex;gap:10px;width:100%;">
+                <input id="message-input" placeholder="Сообщение..." 
+                    onkeydown="if(event.key==='Enter') sendMessage()"
+                    oninput="onTyping()" />
             <input type="file" id="file-input" accepts="image/*" multiple style="display:none" onchange="uploadFiles(this.files)"/>
             <button onclick="document.getElementById('file-input').click()" style="padding:12px;background:#2a2a2a;border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:18px;">📎</button>
             <button onclick="sendMessage()">→</button>
@@ -462,7 +503,7 @@
             });
             const data = await res.json();
             data.forEach(msg => {
-                addMessage(msg.message, msg.from === email ? "out" : "in", msg.created_at, msg.id, msg.is_read);
+                addMessage(msg.message, msg.from === email ? "out" : "in", msg.created_at, msg.id, msg.is_read, msg.reply_to_id, msg.reply_to_text);
             });
         }
 
@@ -510,7 +551,7 @@
                         tick.style.color = "#4caf50";
                     });
                 } else if (data.from === currentContact) {
-                    addMessage(data.message, "in", null, data.id);
+                    addMessage(data.message, "in", null, data.id, false, data.reply_to_id, data.reply_to_text);
                 }
             
             };
@@ -526,7 +567,7 @@
         }
         
 
-        function addMessage(text, type, time = null, msgId = null, isRead = false) {
+        function addMessage(text, type, time = null, msgId = null, isRead = false, replyId = null, replyText = null) {
             const div = document.getElementById("messages");
             const msg = document.createElement("div");
             msg.className = "message " + type;
@@ -542,16 +583,24 @@
             }
 
 
+            if (replyText) {
+                const quote = document.createElement("div");
+                quote.className = "reply-quote";
+                quote.innerText = replyText;
+                msg.appendChild(quote);
+            }
+
             if (text.startsWith("/uploads/")) {
                 const img = document.createElement("img");
                 img.src = `${API}${text}`;
                 img.style.cssText = "max-width:100%;border-radius:8px;display:block;";
                 img.style.cursor = "zoom-in";
                 img.onclick = () => openLightbox(img.src);
-                msg.innerText = "";
                 msg.appendChild(img);
             } else {
-                msg.innerText = text;
+                const textEl = document.createElement("span");
+                textEl.innerText = text;
+                msg.appendChild(textEl);
             }
             
             const meta = document.createElement("div");
@@ -599,6 +648,17 @@
                     pressTimer = setTimeout(() => showReactionPicker(msgId, msg), 500);
                 });
                 msg.addEventListener("touchend", () => clearTimeout(pressTimer));
+
+                const replyBth = document.createElement("button");
+                replyBth.innerText = "↩";
+                replyBth.style.cssText = "background:none;border:none;color:#888;cursor:pointer;font-size:16px;padding:2px 6px;opacity:0;transition:opacity 0.2s;";
+                replyBth.onclick = (e) => {
+                    e.stopPropagation();
+                    setReply(msgId,text);
+                };
+                msg.addEventListener("mouseenter", () => replyBth.style.opacity = "1");
+                msg.addEventListener("mouseleave", () => replyBth.style.opacity = "0");
+                meta.appendChild(replyBth);
             }
 
             if (isSpecialChat && type === "out") {
@@ -618,6 +678,24 @@
             }
         }    
         let typingTimeout = null;
+
+        let replyToId = null;
+        let replyToText = null;
+
+        function setReply(msgId, text) {
+            replyToId = msgId;
+            replyToText = text;
+            document.getElementById("reply-preview").style.display = "flex";
+            document.getElementById("reply-preview-text").innerText = text;
+            document.getElementById("message-input").focus();
+        }
+
+        function cancelReply() {
+            replyToId = null;
+            replyToText = null;
+            document.getElementById("reply-preview").style.display = "none";
+            document.getElementById("reply-preview-text").innerText = "";
+        }
 
         let reactionPickerEl = null;
 
@@ -698,9 +776,14 @@
             const input = document.getElementById("message-input");
             const text = input.value.trim();
             if (!text || !currentContact || !ws) return;
-            ws.send(JSON.stringify({to: currentContact, message: text}));
-            addMessage(text, "out");
+            ws.send(JSON.stringify({
+                to: currentContact, 
+                message: text,
+                reply_to_id: replyToId
+            }));
+            addMessage(text, "out", null, null, false, replyToId, replyToText);
             input.value = "";
+            cancelReply();
         }
 
         function logout() {
