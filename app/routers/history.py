@@ -14,7 +14,9 @@ async def get_history(user1: str, user2: str, current_user: str = Depends(get_cu
     
     messages = db.query(Message).filter(
         ((Message.sender_email == user1) & (Message.recipient_email == user2)) |
-        ((Message.sender_email == user2) & (Message.recipient_email == user1))
+        ((Message.sender_email == user2) & (Message.recipient_email == user1)) |
+        ((Message.sender_email == "ai-bot@omni") & (Message.recipient_email == user1) & (Message.chat_with == user2)) |
+        ((Message.sender_email == "ai-bot@omni") & (Message.recipient_email == user2) & (Message.chat_with == user1))
     ).order_by(Message.created_at).all()
     
     return [
@@ -28,6 +30,7 @@ async def get_history(user1: str, user2: str, current_user: str = Depends(get_cu
             "reply_to_text": decrypt_message(
                 db.query(Message).filter(Message.id == msg.reply_to_id).first().content
             ) if msg.reply_to_id else None
+            "is_ai": msg.sender_email == "ai-bot@omni"
         }
         for msg in messages
     ]

@@ -87,6 +87,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
 
             text = message_data.get("message", "")
             is_ai = text.startswith("@ai")
+            is_romantic = "*" in text.split()[0] if is_ai else False
             use_70b = text.startswith("@ai70")
 
             if is_ai:
@@ -108,14 +109,22 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
                 history.reverse()
                 context = [{"from": m.sender_email, "message": decrypt_message(m.content)} for m in history]
 
-                system = "Ты помощник в мессенджере Omni. Отвечай кратко и по делу. Не используй markdown разметку. Отвечай только на русском языке."
+                SPECIAL_PAIR = {
+                    "asotnikov705@gmail.com",
+                    "kazambievauzli@mail.ru"
+                }
+                if is_romantic and user_email in SPECIAL_PAIR and message_data["to"] in SPECIAL_PAIR:
+                    system = "Ты помощник в мессенджере Omni. Отвечай кратко и по делу. Не используй markdown. Отвечай только на русском языке. После ответа добавь одну короткую фразу от Саши его девушке — пожелание хорошего дня или настроения плюс простой комплимент. Естественно, без пафоса. Формат: PS от Саши: [фраза]"
+                else:
+                    system = "Ты помощник в мессенджере Omni. Отвечай кратко и по делу. Не используй markdown разметку. Отвечай только на русском языке."
                 
                 ai_response = await ask_ai(text, context, model, system)
 
                 ai_message = Message(
                     sender_email="ai-bot@omni",
                     recipient_email=user_email,
-                    content=encrypt_message(ai_response)
+                    content=encrypt_message(ai_response),
+                    chat_with=message_data["to"]
                 )
                 db.add(ai_message)
                 db.commit()
