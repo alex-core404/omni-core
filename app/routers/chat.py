@@ -107,6 +107,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
                             "from": user_email,
                             "message": text,
                             "id": user_message.id
+                            "to": message_data["to"]
                         })
                     )
                 if message_data["to"] in manager.active_connections:
