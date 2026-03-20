@@ -42,7 +42,7 @@ class ConnectionManager:
                     "reply_to_text": reply_to_text
                 })
             )
-async def ask_ai(user_message: str, context_messages: list, model: str = "meta-llama/llama-3.1-8b-instruct", system_prompt: str = "Ты помощник в мессенджере Omni. Отвечай кратко и по делу, максимум 3-5 предложений. Не используй markdown.") -> str:
+async def ask_ai(user_message: str, context_messages: list, model: str = "meta-llama/llama-3.3-70b-instruct", system_prompt: str = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально. Только на русском языке.") -> str:
     messages = [
         {
             "role": "system",
@@ -118,7 +118,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
                             "id": user_message.id
                         })
                     )
-                model = "meta-llama/llama-3.3-70b-instruct" if use_70b else "meta-llama/llama-3.1-8b-instruct"
+                model = "meta-llama/llama-3.3-70b-instruct"
 
                 context_count = 20
                 parts = text.split()
@@ -143,8 +143,8 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
                 if is_romantic and user_email in SPECIAL_PAIR and message_data["to"] in SPECIAL_PAIR:
                     system = "Ты помощник в мессенджере Omni. Отвечай кратко и по делу. Не используй markdown. Отвечай только на русском языке. После ответа добавь одну короткую фразу от Саши его девушке — пожелание хорошего дня или настроения плюс простой комплимент. Естественно, без пафоса. Формат: PS от Саши: [фраза]"
                 else:
-                    system = "Ты помощник в мессенджере Omni. Отвечай кратко и по делу. Не используй markdown разметку. Отвечай только на русском языке."
-                
+                    system = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально, как умный друг. Можешь пошутить если уместно. Не используй канцелярит и роботизированные фразы типа 'Извините' или 'Я готов помочь'. Отвечай кратко и по делу. Только на русском языке, без иероглифов и других языков."
+                    
                 ai_response = await ask_ai(text, context, model, system)
 
                 ai_message = Message(
