@@ -106,7 +106,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
                         json.dumps({
                             "from": user_email,
                             "message": text,
-                            "id": user_message.id
+                            "id": user_message.id,
                             "to": message_data["to"]
                         })
                     )
