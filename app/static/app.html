@@ -553,6 +553,8 @@
                     });
                 } else if (data.from === "ai-bot@omni" && data.chat_with === currentContact) {
                     addMessage(data.message, "in", null, data.id, false, null, null, true);
+                } else if (data.from === email && data.to === currentContact) {
+                    addMessage(data.message, "out", null, data.id, false, null, null);
                 } else if (data.from === currentContact) {
                     addMessage(data.message, "in", null, data.id, false, data.reply_to_id, data.reply_to_text);
                 }
@@ -791,7 +793,9 @@
                 message: text,
                 reply_to_id: replyToId
             }));
-            addMessage(text, "out", null, null, false, replyToId, replyToText);
+            if (!text.startsWith("@ai")) {
+                addMessage(text, "out", null, null, false, replyToId, replyToText);
+            }
             input.value = "";
             cancelReply();
         }

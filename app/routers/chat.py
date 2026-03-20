@@ -91,6 +91,32 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
             use_70b = text.startswith("@ai70")
 
             if is_ai:
+                user_message = Message(
+                    sender_email=user_email,
+                    recipient_email=message_data["to"],
+                    content=encrypt_message(text),
+                    chat_with=None
+                )
+                db.add(user_message)
+                db.commit()
+                db.refresh(user_message)
+
+                if user_email in manager.active_connections:
+                    await manager.active_connections[user_email].send_text(
+                        json.dumps({
+                            "from": user_email,
+                            "message": text,
+                            "id": user_message.id
+                        })
+                    )
+                if message_data["to"] in manager.active_connections:
+                    await manager.active_connections[message_data["to"]].send_text(
+                        json.dumps({
+                            "from": user_email,
+                            "message": text,
+                            "id": user_message.id
+                        })
+                    )
                 model = "meta-llama/llama-3.3-70b-instruct" if use_70b else "meta-llama/llama-3.1-8b-instruct"
 
                 context_count = 20
