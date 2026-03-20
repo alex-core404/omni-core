@@ -29,7 +29,7 @@ async def get_history(user1: str, user2: str, current_user: str = Depends(get_cu
             "reply_to_id": msg.reply_to_id,
             "reply_to_text": decrypt_message(
                 db.query(Message).filter(Message.id == msg.reply_to_id).first().content
-            ) if msg.reply_to_id else None
+            ) if msg.reply_to_id else None,
             "is_ai": msg.sender_email == "ai-bot@omni"
         }
         for msg in messages
