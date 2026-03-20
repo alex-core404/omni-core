@@ -12,5 +12,6 @@ class Message(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     is_read = Column(Boolean, default=False)
     reply_to_id = Column(Integer, ForeignKey("messages.id", ondelete="SET NULL"), nullable=True)
+    chat_with = Column(String, nullable=True)
 
     
