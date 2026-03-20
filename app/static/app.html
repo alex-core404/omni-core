@@ -504,7 +504,7 @@
             const data = await res.json();
             data.forEach(msg => {
                 const type = msg.is_ai ? "in" : (msg.from == email ? "out" : "in");
-                addMessage(msg.message, msg.from === email ? "out" : "in", msg.created_at, msg.id, msg.is_read, msg.reply_to_id, msg.reply_to_text);
+                addMessage(msg.message, type, msg.created_at, msg.id, msg.is_read, msg.reply_to_id, msg.reply_to_text, msg.is_ai);
             });
         }
 
