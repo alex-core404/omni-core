@@ -58,7 +58,7 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "meta-l
     response = openai_client.chat.completions.create(
         model=model,
         messages=messages,
-        max_tokens=300
+        max_tokens=500 if is_personal_ai else 300
     )
     return response.choices[0].message.content
 
@@ -86,7 +86,9 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
                 continue
 
             text = message_data.get("message", "")
-            is_ai = text.startswith("@ai")
+            is_ai = text.startswith("@ai") or message_data.get("to") == "ai-bot@omni"
+            is_personal_ai = message_data.get("to") == "ai-bot@omni"
+
             is_romantic = "*" in text.split()[0] if is_ai else False
             use_70b = text.startswith("@ai70")
 
@@ -120,7 +122,6 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
                     )
                 model = "meta-llama/llama-3.3-70b-instruct"
 
-                context_count = 20
                 parts = text.split()
                 for part in parts:
                     if part.startswith("c:"):
@@ -140,9 +141,14 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
                     "asotnikov705@gmail.com",
                     "kazambievauzli@mail.ru"
                 }
-                if is_romantic and user_email in SPECIAL_PAIR and message_data["to"] in SPECIAL_PAIR:
+                if is_personal_ai:
+                    context_count = 50
+                    system = "Ты Omni AI — личный умный ассистент. Общайся естественно и неформально как близкий друг. Рассуждай, можешь шутить. Помни контекст разговора. Не используй канцелярит. Только на русском языке."
+                elif is_romantic and user_email in SPECIAL_PAIR and message_data["to"] in SPECIAL_PAIR:
+                    context_count = 20
                     system = "Ты Omni AI. Отвечай кратко и по делу. Не используй markdown. Только на русском языке. После ответа добавь одну короткую фразу — пожелание или комплимент от Саши его девушке, каждый раз разное и непохожее на предыдущее. Формат: PS Саша →❤️ [фраза]"
                 else:
+                    context_count = 20
                     system = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально, как умный друг. Можешь пошутить если уместно. Не используй канцелярит и роботизированные фразы типа 'Извините' или 'Я готов помочь'. Отвечай кратко и по делу. Только на русском языке, без иероглифов и других языков."
 
                 ai_response = await ask_ai(text, context, model, system)

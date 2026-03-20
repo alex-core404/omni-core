@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
+from app.models.contact import Contact
 from app.schemas.user import UserCreate, UserResponse
 from passlib.context import CryptContext
 from jose import JWTError, jwt 
@@ -43,6 +44,14 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    ai_contact = Contact(
+        owner_email=new_user.email,
+        contact_email="ai-bot@omni"
+    )
+    db.add(ai_contact)
+    db.commit()
+    
     return new_user
 
 @router.post("/login")

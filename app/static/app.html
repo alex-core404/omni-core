@@ -357,7 +357,27 @@
         function renderContacts() {
             const div = document.getElementById("contacts");
             div.innerHTML = "";
-            contacts.forEach(c => {
+
+            const aiEl = document.createElement("div");
+            aiEl.className = "contact" + (currentContact === "ai-bot@omni" ? " active" : "");
+            aiEl.style.cssText = "display:flex;align-items:center;border-bottom:2px solid #6c63ff;";
+            aiEl.onclick = () => {
+                openChat("ai-bot@omni");
+                document.querySelector(".sidebar").classList.remowe("open");
+            };
+            const aiIcon = document.createElement("span");
+            aiIcon.innerText = "🤖";
+            aiIcon.style.cssText = "margin-right:10px;font-size:18px;";
+            const aiName = document.createElement("span");
+            aiName.innerText = "Omni AI";
+            aiName.style.cssText = "flex:1;color:#6c63ff;font-weight:bold;";
+            aiEl.appendChild(aiIcon);
+            aiEl.appendChild(aiName);
+            div.appendChild(aiEl);
+
+            contacts.filter(c => c.email !== "ai-bot@omni").forEach(c => {
+
+
                 const el = document.createElement("div");
                 el.className = "contact" + (c.email === currentContact ? " active" : "");
             
@@ -463,7 +483,7 @@
         function openChat(contact) {
             currentContact = contact;
             const c = contacts.find(c => c.email === contact);
-            document.getElementById("chat-title").innerText = c ? c.username : contact;
+            document.getElementById("chat-title").innerText = contact === "ai-bot@omni" ? "🤖 Omni AI" : (c ? c.username : contact);
             const headerDot = document.getElementById("header-dot");
             headerDot.style.display = "inline-block";
             headerDot.style.background = "#444";
@@ -551,7 +571,7 @@
                         tick.innerText = "✓✓";
                         tick.style.color = "#4caf50";
                     });
-                } else if (data.from === "ai-bot@omni" && data.chat_with === currentContact) {
+                } else if (data.from === "ai-bot@omni" && (data.chat_with === currentContact || currentContact === "ai-bot@omni")) {
                     addMessage(data.message, "in", null, data.id, false, null, null, true);
                 } else if (data.from === email && data.to === currentContact) {
                     addMessage(data.message, "out", null, data.id, false, null, null);
@@ -793,7 +813,7 @@
                 message: text,
                 reply_to_id: replyToId
             }));
-            if (!text.startsWith("@ai")) {
+            if (!text.startsWith("@ai") && currentContact !== "ai-bot@omni") {
                 addMessage(text, "out", null, null, false, replyToId, replyToText);
             }
             input.value = "";
