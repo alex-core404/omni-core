@@ -139,6 +139,15 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
                             "chat_with": message_data["to"]
                         })
                     )
+                if message_data["to"] in manager.active_connections:
+                    await manager.active_connections[message_data["to"]].send_text(
+                        json.dumps({
+                            "from": "ai-bot@omni",
+                            "message": ai_response,
+                            "id": ai_message.id,
+                            "chat_with": user_email
+                        })
+                    )
                 continue
 
 
