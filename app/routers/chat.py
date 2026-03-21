@@ -13,7 +13,7 @@ import re
 
 def postprocess_ai_response(text: str) -> str:
     text = re.sub(r'\bеё\s+(скоро|будет|собирается|хочет|может|вернется|придет)\b', r'она \1', text, flags=re.IGNORECASE)
-    text = re.sub(r'[a-zA-Z]', '', text)
+    text = re.sub(r'[^\u0400-\u04FF\s.,!?;:\-()"\'❤️]', '', text)    # 3. Нормализуем пробелы
     text = re.sub(r'\s+', ' ', text)
     text = re.sub(r'\s+([.,!?;:])', r'\1', text)
     text = re.sub(r'(?<!\bPS\s)Саша\s*->\s*❤️', r'PS Саша ->❤️', text)
