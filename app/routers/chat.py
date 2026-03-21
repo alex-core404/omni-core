@@ -18,25 +18,6 @@ def postprocess_ai_response(text: str) -> str:
     text = re.sub(r'\s+', ' ', text)
     text = re.sub(r'\s+([.,!?;:])', r'\1', text)
     text = re.sub(r'Саша\s*[->❤️\-—]?\s*❤️', r'PS Саша ->❤️', text)
-    if "PS Саша ->❤️" not in text:
-        text = text.strip()
-        if not text.endswith(('.', '!', '?')):
-            text += '.'
-        compliments = [
-            "Ты у меня самая лучшая.",
-            "Твоя улыбка делает мой день.",
-            "Ты замечательная.",
-            "Я восхищаюсь тобой.",
-            "Ты невероятная.",
-            "Мне так повезло с тобой.",
-            "Ты прекрасна.",
-            "Ты умница.",
-            "Ты моя опора.",
-            "С тобой мир становится ярче."
-        ]
-        chosen = random.choice(compliments)
-        text += f'\nPS Саша ->❤️ {chosen}'
-    
     text = re.sub(r'([.!?])\s*(PS Саша ->❤️)', r'\1\n\2', text)
     text = re.sub(r'(PS Саша ->❤️.*?)дорогой\b', r'\1дорогая', text, flags=re.IGNORECASE)
     text = re.sub(r'(PS Саша ->❤️.*?)любимый\b', r'\1любимая', text, flags=re.IGNORECASE)
