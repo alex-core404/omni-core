@@ -123,6 +123,9 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                     )
                 model = "meta-llama/llama-3.3-70b-instruct"
 
+                context_count = 20
+                    system = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально, как умный друг. Можешь пошутить если уместно. Не используй канцелярит и роботизированные фразы типа 'Извините' или 'Я готов помочь'. Отвечай кратко и по делу. Только на русском языке, без иероглифов и других языков."
+
                 parts = text.split()
                 for part in parts:
                     if part.startswith("c:"):
@@ -131,13 +134,6 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                         except:
                             pass
                 
-                history = db.query(Message).filter(
-                    ((Message.sender_email == user_email) & (Message.recipient_email == message_data["to"])) |
-                    ((Message.sender_email == message_data["to"]) & (Message.recipient_email == user_email))
-                ).order_by(Message.created_at.desc()).limit(context_count).all()
-                history.reverse()
-                context = [{"from": m.sender_email, "message": decrypt_message(m.content)} for m in history]
-
                 SPECIAL_PAIR = {
                     "asotnikov705@gmail.com",
                     "kazambievauzli@mail.ru"
@@ -146,13 +142,20 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                     context_count = 50
                     system = "Ты Omni AI — личный умный ассистент. Общайся естественно и неформально как близкий друг. Рассуждай, можешь шутить. Помни контекст разговора. Не используй канцелярит. Только на русском языке."
                 elif is_romantic and user_email in SPECIAL_PAIR and message_data["to"] in SPECIAL_PAIR:
+            in SPECIAL_PAIR:
                     context_count = 20
                     system = "Ты Omni AI. Отвечай кратко и по делу. Не используй markdown. Только на русском языке. После ответа добавь одну короткую фразу — пожелание или комплимент от Саши его девушке, каждый раз разное и непохожее на предыдущее. Формат: PS Саша →❤️ [фраза]"
-                else:
-                    context_count = 20
-                    system = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально, как умный друг. Можешь пошутить если уместно. Не используй канцелярит и роботизированные фразы типа 'Извините' или 'Я готов помочь'. Отвечай кратко и по делу. Только на русском языке, без иероглифов и других языков."
 
-                ai_response = await ask_ai(text, context, model, system)
+
+                history = db.query(Message).filter(
+                    ((Message.sender_email == user_email) & (Message.recipient_email == message_data["to"])) |
+                    ((Message.sender_email == message_data["to"]) & (Message.recipient_email == user_email))
+                ).order_by(Message.created_at.desc()).limit(context_count).all()
+                history.reverse()
+                context = [{"from": m.sender_email, "message": decrypt_message(m.content)} for m in history]
+
+
+                ai_response = await ask_ai(text, context, model, system, is_personal_ai=is_personal_ai)
 
                 ai_message = Message(
                     sender_email="ai-bot@omni",
