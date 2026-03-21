@@ -16,7 +16,11 @@ def postprocess_ai_response(text: str) -> str:
     text = re.sub(r'[^\u0400-\u04FF\s.,!?;:\-()"\'❤️]', '', text)
     text = re.sub(r'\s+', ' ', text)
     text = re.sub(r'\s+([.,!?;:])', r'\1', text)
-    text = re.sub(r'(?<!\bPS\s)Саша\s*[-–>]?\s*❤️', r'PS Саша ->❤️', text)
+    match = re.search(r'Саша\s*[->❤️\-—]?\s*❤️', text)
+    if match and not re.search(r'PS\s*Саша', text):
+        text = re.sub(r'Саша\s*[->❤️\-—]?\s*❤️', r'PS Саша ->❤️', text)
+    elif match and re.search(r'PS\s*Саша', text):
+        text = re.sub(r'PS\s*Саша\s*[->❤️\-—]?\s*❤️', r'PS Саша ->❤️', text)
     text = re.sub(r'([.!?])\s*(PS Саша ->❤️)', r'\1\n\2', text)
     return text.strip()
 
