@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from typing import Dict
 import redis.asyncio as aioredis
 import json
-from app.database import get_db
+from app.database import get_db, SessionLocal
 from app.models.message import Message
 from openai import OpenAI
 import os
@@ -65,8 +65,9 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "meta-l
 manager = ConnectionManager()
 
 @router.websocket("/ws/{user_email}")
-async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session = Depends(get_db)):
+async def websocket_endpoint(websocket: WebSocket, user_email: str):
     await manager.connect(websocket, user_email)
+    db = SessionLocal()
     try:
         while True:
             data = await websocket.receive_text()
@@ -211,6 +212,8 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str, db: Session 
             )
     except WebSocketDisconnect:
         await manager.disconnect(user_email)
+    finaly:
+        db.close()
 
 @router.get("/online/{user_email}")
 async def check_online(user_email: str):
