@@ -50,7 +50,7 @@ class ConnectionManager:
                     "reply_to_text": reply_to_text
                 })
             )
-async def ask_ai(user_message: str, context_messages: list, model: str = "meta-llama/llama-3.3-70b-instruct", system_prompt: str = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально. Только на русском языке.", is_personal_ai: bool = False) -> str:
+async def ask_ai(user_message: str, context_messages: list, model: str = "meta-llama/llama-4-maverick", system_prompt: str = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально. Только на русском языке.", is_personal_ai: bool = False) -> str:
     messages = [
         {
             "role": "system",
@@ -128,7 +128,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                             "id": user_message.id
                         })
                     )
-                model = "meta-llama/llama-3.3-70b-instruct"
+                model = "meta-llama/llama-4-maverick"
 
                 context_count = 20
                 system = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально, как умный друг. Можешь пошутить если уместно. Не используй канцелярит и роботизированные фразы типа 'Извините' или 'Я готов помочь'. Отвечай кратко и по делу. **Только русский язык.** Никаких английских слов, иероглифов."
