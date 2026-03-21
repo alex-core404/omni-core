@@ -98,7 +98,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                     sender_email=user_email,
                     recipient_email=message_data["to"],
                     content=encrypt_message(text),
-                    chat_with=None
+                    chat_with="ai-bot@omni" if is_personal_ai else None
                 )
                 db.add(user_message)
                 db.commit()

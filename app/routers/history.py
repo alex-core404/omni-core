@@ -50,6 +50,7 @@ async def get_unread(user_email: str, current_user: str = Depends(get_current_us
         counts[msg.sender_email] = counts.get(msg.sender_email, 0) + 1
 
     return counts
+
 @router.post("/read/{user_email}/{contact_email}")
 async def mark_as_read(user_email: str, contact_email: str, current_user: str = Depends(get_current_user), db: Session = Depends(get_db)):
     if current_user != user_email:
@@ -62,6 +63,39 @@ async def mark_as_read(user_email: str, contact_email: str, current_user: str = 
     ).update({"is_read": True})
     db.commit()
     return {"status": "ok"}
+
+@router.get("/ai-history/{user_email}")
+async def get_ai_history(user_email: str, current_user: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user != user_email:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    messages = db.query(Message).filter(
+        (
+            (Message.sender_email == user_email) &
+            (Message.recipient_email == "ai-bot@omni") &
+            (Message.chat_with == "ai-bot@omni")
+        ) | (
+            (Message.sender_email == "ai-bot@omni") &
+            (Message.recipient_email == user_email) &
+            (Message.chat_with == "ai-bot@omni")
+        )
+    ).order_by(Message.created_at.asc()).all()
+
+    return [
+        {
+            "id": msg.id,
+            "from": msg.sender_email,
+            "message": decrypt_message(msg.content),
+            "created_at": str(msg.created_at),
+            "is_read": msg.is_read,
+            "reply_to_id": msg.reply_to_id,
+            "reply_to_text": decrypt_message(
+                db.query(Message).filter(Message.id == msg.reply_to_id).first().content
+            ) if msg.reply_to_id else None,
+            "is_ai": msg.sender_email == "ai-bot@omni"
+        }
+        for msg in messages
+    ]
 
 
 

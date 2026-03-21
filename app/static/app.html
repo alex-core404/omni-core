@@ -363,7 +363,7 @@
             aiEl.style.cssText = "display:flex;align-items:center;border-bottom:2px solid #6c63ff;";
             aiEl.onclick = () => {
                 openChat("ai-bot@omni");
-                document.querySelector(".sidebar").classList.remowe("open");
+                document.querySelector(".sidebar").classList.remove("open");
             };
             const aiIcon = document.createElement("span");
             aiIcon.innerText = "🤖";
@@ -518,9 +518,11 @@
         }
 
         async function loadHistory(contact) {
-            const res = await fetch(`${API}/history/${email}/${contact}`,{
-                headers: {"Authorization": `Bearer ${token}`}
-            });
+            let url = `${API}/history/${email}/${contact}`;
+            if (contact === "ai-bot@omni") {
+                url = `${API}/ai-history/${email}`;
+            }
+            const res = await fetch(url, { headers: {"Authorization": `Bearer ${token}`} });
             const data = await res.json();
             data.forEach(msg => {
                 const type = msg.is_ai ? "in" : (msg.from == email ? "out" : "in");
