@@ -352,6 +352,22 @@
             contacts = await res.json();
             renderContacts();
         }
+        async function updateUnreadCount() {
+            try {
+                const res = await fetch(`${API}/unread/${email}`, {
+                    headers: {"Authorization": `Bearer ${token}`}
+                });
+                const counts = await res.json();
+                const totalUnread = Object.values(counts).reduce((a, b) => a + b, 0);
+                if (totalUnread > 0) {
+                    document.title = `(${totalUnread}) Omni`;
+                } else {
+                    document.title = `Omni`;
+                }
+            } catch (err) {
+                console.error("Ошибка обновления счётчика непрочитанных:", err);
+            }
+        }
 
         function renderContacts() {
             const div = document.getElementById("contacts");
@@ -571,6 +587,7 @@
             ws = new WebSocket(`ws://5.42.110.162:8000/ws/${email}`);
             ws.onmessage = async function(event) {
                 const data = JSON.parse(event.data);
+                updateUnreadCount();
                 if (!contacts.find(c => c.email === data.from) && data.from !== "ai-bot@omni") {
                     await fetch(`${API}/contacts/add?owner_email=${email}&contact_email=${data.from}`, {
                         method: "POST",
@@ -850,6 +867,8 @@
         setInterval(updateOnlineStatus, 5000);
         setInterval(updateUnread, 5000);
         connectWS();
+        updateUnreadCount();
+        setInterval(updateUnreadCount, 3000); // каждые 3 секунды
     </script>
 </body>
 </html>
