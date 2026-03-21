@@ -12,7 +12,7 @@ import re
 
 
 def postprocess_ai_response(text: str) -> str:
-    text = re.sub(r'[^\u0400-\u04FF\s.,!?;:\-()"\'❤️]', '', text)
+    text = re.sub(r'[^\u0400-\u04FF\s0-9.,!?;:\-()"\'❤️]', '', text)
     text = re.sub(r'\s+', ' ', text)
     text = re.sub(r'\s+([.,!?;:])', r'\1', text)
     return text.strip()
