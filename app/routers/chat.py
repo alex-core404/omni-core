@@ -8,6 +8,15 @@ from app.database import get_db, SessionLocal
 from app.models.message import Message
 from openai import OpenAI
 import os
+import re
+
+
+der postprocess_ai_response(text: str) -> str:
+    text = re.sub(r'\bеё\s+(скоро|будет|собирается|хочет|может|вернется|придет)\b', r'она \1', text, flags=re.IGNORECASE)
+    text = re.sub(r'[a-zA-Z]', '', text)
+    text = re.sub(r'\s+', ' ', text)
+    text = re.sub(r'\s+([.,!?;:])', r'\1', text)
+    return text.strip()
 
 openai_client = OpenAI(
     api_key=os.getenv("OPENROUTER_API_KEY"),
@@ -146,9 +155,9 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                     system = """Ты — чуткий и внимательный собеседник. Общаешься с девушкой Саши. Отвечай тепло, но по делу, с лёгкой романтической ноткой.
                     Правила:
                     - **Весь ответ (и основная часть, и PS) пиши строго на русском языке. Ни одной английской буквы, цифр, иероглифов, эмодзи.**
-                    - Отвечай кратко (1–2 предложения).
                     - После основного ответа добавь короткую фразу-пожелание или комплимент от имени Саши (от меня) для его девушки. Формат: PS Саша ->❤️ [фраза].
                     - Фраза в PS должна быть естественной, искренней, от первого лица Саши. Пример: "PS Саша ->❤️ Скучаю по твоей улыбке" или "PS Саша ->❤️ Ты у меня самая лучшая".
+                    - **Следи за грамматикой: используй правильные падежи и согласование. Например, "Она скоро вернётся", а не "Её скоро вернётся".**
                     - Не используй markdown. Всегда заканчивай предложение."""
 
 
@@ -161,6 +170,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
 
 
                 ai_response = await ask_ai(text, context, model, system, is_personal_ai=is_personal_ai)
+                ai_response = postprocess_ai_response(ai_response)
 
                 ai_message = Message(
                     sender_email="ai-bot@omni",
