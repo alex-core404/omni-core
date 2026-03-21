@@ -212,7 +212,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
             )
     except WebSocketDisconnect:
         await manager.disconnect(user_email)
-    finaly:
+    finally:
         db.close()
 
 @router.get("/online/{user_email}")
