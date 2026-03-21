@@ -42,7 +42,7 @@ class ConnectionManager:
                     "reply_to_text": reply_to_text
                 })
             )
-async def ask_ai(user_message: str, context_messages: list, model: str = "meta-llama/llama-3.3-70b-instruct", system_prompt: str = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально. Только на русском языке.") -> str:
+async def ask_ai(user_message: str, context_messages: list, model: str = "meta-llama/llama-3.3-70b-instruct", system_prompt: str = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально. Только на русском языке.", is_personal_ai: bool = False) -> str:
     messages = [
         {
             "role": "system",
@@ -124,7 +124,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                 model = "meta-llama/llama-3.3-70b-instruct"
 
                 context_count = 20
-                    system = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально, как умный друг. Можешь пошутить если уместно. Не используй канцелярит и роботизированные фразы типа 'Извините' или 'Я готов помочь'. Отвечай кратко и по делу. Только на русском языке, без иероглифов и других языков."
+                system = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально, как умный друг. Можешь пошутить если уместно. Не используй канцелярит и роботизированные фразы типа 'Извините' или 'Я готов помочь'. Отвечай кратко и по делу. Только на русском языке, без иероглифов и других языков."
 
                 parts = text.split()
                 for part in parts:
@@ -142,7 +142,6 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                     context_count = 50
                     system = "Ты Omni AI — личный умный ассистент. Общайся естественно и неформально как близкий друг. Рассуждай, можешь шутить. Помни контекст разговора. Не используй канцелярит. Только на русском языке."
                 elif is_romantic and user_email in SPECIAL_PAIR and message_data["to"] in SPECIAL_PAIR:
-            in SPECIAL_PAIR:
                     context_count = 20
                     system = "Ты Omni AI. Отвечай кратко и по делу. Не используй markdown. Только на русском языке. После ответа добавь одну короткую фразу — пожелание или комплимент от Саши его девушке, каждый раз разное и непохожее на предыдущее. Формат: PS Саша →❤️ [фраза]"
 
