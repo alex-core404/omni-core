@@ -6,12 +6,12 @@ import redis.asyncio as aioredis
 import json
 from app.database import get_db, SessionLocal
 from app.models.message import Message
-from openai import OpenAI
+from openai import AsyncOpenAI
 import os
 import re
 
 
-openai_client = OpenAI(
+openai_client = AsyncOpenAI(
     api_key=os.getenv("OPENROUTER_API_KEY"),
     base_url="https://openrouter.ai/api/v1"
 )
@@ -60,7 +60,7 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "meta-l
 
     max_tokens_limit = 800 if is_personal_ai else 300
 
-    response = openai_client.chat.completions.create(
+    response = await openai_client.chat.completions.create(
         model=model,
         messages=messages,
         max_tokens=max_tokens_limit,
@@ -71,7 +71,9 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "meta-l
             "X-Title": "Omni AI"
         }
     )
-    return response.choices[0].message.content
+    if response.choices:
+        return response.choices[0].message.content
+    return "Ошибка: ИИ прислал пустой ответ"
 
 manager = ConnectionManager()
 
