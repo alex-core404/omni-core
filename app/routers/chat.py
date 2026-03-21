@@ -52,11 +52,20 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "meta-l
         }
     ]
     for msg in context_messages:
-        role = "assistant" if msg["from"] == "ai-bot@omni" else "user"
-        messages.append({"role": role, "content": msg["message"]})
+        if msg["from"] == "ai-bot@omni":
+            role = "assistant"
+            content = msg["message"]
+        else:
+            role = "user"
+            content = msg["message"].replace("@ai70", "").replace("@ai", "").strip()
 
-    if not messages or messages[-1]["content"] != user_message:
-        messages.append({"role": "user", "content": user_message})
+        messages.append({"role": role, "content": content})
+
+    clean_user_message = user_message.replace("@ai70", "").replace("@ai", "").strip()
+
+    if not messages or messages[-1]["content"] != clean_user_message:
+        if clean_user_message:
+             messages.append({"role": "user", "content": clean_user_message})
 
     max_tokens_limit = 800 if is_personal_ai else 300
 
