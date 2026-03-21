@@ -51,7 +51,7 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "meta-l
     ]
     for msg in context_messages:
         role = "assistant" if msg["from"] == "ai-bot@omni" else "user"
-        messages.append({"role": role, "content": f"{msg['from']}: {msg['message']}"})
+        messages.append({"role": role, "content": msg["message"]})
 
     messages.append({"role": "user", "content": user_message})
 
