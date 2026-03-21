@@ -11,7 +11,7 @@ import os
 import re
 
 
-der postprocess_ai_response(text: str) -> str:
+def postprocess_ai_response(text: str) -> str:
     text = re.sub(r'\bеё\s+(скоро|будет|собирается|хочет|может|вернется|придет)\b', r'она \1', text, flags=re.IGNORECASE)
     text = re.sub(r'[a-zA-Z]', '', text)
     text = re.sub(r'\s+', ' ', text)
