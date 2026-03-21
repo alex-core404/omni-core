@@ -1,4 +1,3 @@
-import random
 from app.crypto import encrypt_message, decrypt_message
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from sqlalchemy.orm import Session
@@ -13,14 +12,9 @@ import re
 
 
 def postprocess_ai_response(text: str) -> str:
-    text = re.sub(r'\bеё\s+(скоро|будет|собирается|хочет|может|вернется|придет)\b', r'она \1', text, flags=re.IGNORECASE)
     text = re.sub(r'[^\u0400-\u04FF\s.,!?;:\-()"\'❤️]', '', text)
     text = re.sub(r'\s+', ' ', text)
     text = re.sub(r'\s+([.,!?;:])', r'\1', text)
-    text = re.sub(r'Саша\s*[->❤️\-—]?\s*❤️', r'PS Саша ->❤️', text)
-    text = re.sub(r'([.!?])\s*(PS Саша ->❤️)', r'\1\n\2', text)
-    text = re.sub(r'(PS Саша ->❤️.*?)дорогой\b', r'\1дорогая', text, flags=re.IGNORECASE)
-    text = re.sub(r'(PS Саша ->❤️.*?)любимый\b', r'\1любимая', text, flags=re.IGNORECASE)
     return text.strip()
 
 openai_client = OpenAI(
@@ -104,7 +98,6 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
             is_ai = text.startswith("@ai") or message_data.get("to") == "ai-bot@omni"
             is_personal_ai = message_data.get("to") == "ai-bot@omni"
 
-            is_romantic = "*" in text.split()[0] if is_ai else False
             use_70b = text.startswith("@ai70")
 
             if is_ai:
@@ -148,26 +141,9 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                         except:
                             pass
                 
-                SPECIAL_PAIR = {
-                    "asotnikov705@gmail.com",
-                    "kazambievauzli@mail.ru"
-                }
                 if is_personal_ai:
                     context_count = 50
                     system = "Ты Omni AI — личный умный ассистент и собеседник. Общайся естественно, как близкий друг. Твоя задача: быть внимательным, запоминать детали из разговора (имя, интересы, события), задавать уточняющие вопросы, проявлять эмпатию. Не используй канцелярит и роботизированные фразы. Будь живым, иногда шути, но всегда оставайся полезным. **Только русский язык.** Никаких иероглифов. Всегда логически заканчивай предложение, не обрывай на полуслове. Если не знаешь ответа — скажи честно, но предложи помощь. Помни: ты не просто инструмент, ты — собеседник, который заботится о комфорте пользователя."
-                elif is_romantic and user_email in SPECIAL_PAIR and message_data["to"] in SPECIAL_PAIR:
-                    context_count = 20
-                    system = """Ты — чуткий собеседник. Общаешься с девушкой Саши. Саша — мужчина, его девушка — женщина.
-                    
-                    Правила:
-                    1. Весь ответ пиши строго на русском языке. Никаких английских букв, иероглифов, эмодзи.
-                    2. После основного ответа обязательно добавь короткую фразу-пожелание или комплимент от имени Саши для его девушки.
-                    3. Формат PS: на отдельной строке пиши: PS Саша ->❤️ [фраза]
-                    4. Фраза в PS должна быть позитивной, без слов "жду", "скучаю". Используй комплименты, поддержку, нежность. **Каждый раз придумывай новую фразу, не повторяй предыдущие.** Примеры: "Ты у меня самая лучшая", "Твоя улыбка делает мой день", "Ты замечательная", "Я восхищаюсь тобой", "Ты невероятная", "Мне так повезло с тобой".
-                    5. Не используй markdown. Всегда заканчивай предложение.
-
-                    Важно: не забудь добавить PS в конце ответа!"""
-
 
                 history = db.query(Message).filter(
                     ((Message.sender_email == user_email) & (Message.recipient_email == message_data["to"])) |
