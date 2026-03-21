@@ -1,3 +1,4 @@
+import random
 from app.crypto import encrypt_message, decrypt_message
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from sqlalchemy.orm import Session
