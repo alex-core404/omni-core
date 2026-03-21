@@ -55,12 +55,21 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "meta-l
         role = "assistant" if msg["from"] == "ai-bot@omni" else "user"
         messages.append({"role": role, "content": msg["message"]})
 
-    messages.append({"role": "user", "content": user_message})
+    if not messages or messages[-1]["content"] != user_message:
+        messages.append({"role": "user", "content": user_message})
+
+    max_tokens_limit = 800 if is_personal_ai else 300
 
     response = openai_client.chat.completions.create(
         model=model,
         messages=messages,
-        max_tokens=500 if is_personal_ai else 300
+        max_tokens=max_tokens_limit,
+        temperature=0.7,
+        top_p=0.9,
+        extra_headers={
+            "HTTP-Referer": "omni-core.io",
+            "X-Title": "Omni AI"
+        }
     )
     return response.choices[0].message.content
 
