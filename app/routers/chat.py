@@ -172,7 +172,6 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
 
 
                 ai_response = await ask_ai(text, context, model, system, is_personal_ai=is_personal_ai)
-                ai_response = postprocess_ai_response(ai_response)
 
                 ai_message = Message(
                     sender_email="ai-bot@omni",
