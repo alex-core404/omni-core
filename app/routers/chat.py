@@ -67,7 +67,7 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "meta-l
         if clean_user_message:
              messages.append({"role": "user", "content": clean_user_message})
 
-    max_tokens_limit = 800 if is_personal_ai else 300
+    max_tokens_limit = 2000 if is_personal_ai else 300
 
     response = await openai_client.chat.completions.create(
         model=model,
