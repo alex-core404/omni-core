@@ -123,12 +123,18 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
             use_70b = text.startswith("@ai70")
 
             if is_ai:
+                if user_email == "asotnikov705@gmail.com":
+                    model = "deepseek/deepseek-v3.2"
+                else:
+                    model = "meta-llama/llama-4-maverick"
+
                 user_message = Message(
                     sender_email=user_email,
                     recipient_email=message_data["to"],
                     content=encrypt_message(text),
                     chat_with="ai-bot@omni" if is_personal_ai else None
                 )
+
                 db.add(user_message)
                 db.commit()
                 db.refresh(user_message)
@@ -150,7 +156,6 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                             "id": user_message.id
                         })
                     )
-                model = "meta-llama/llama-4-maverick"
 
                 context_count = 20
                 system = """Ты Omni AI — остроумный и эрудированный участник чата. 
@@ -193,11 +198,11 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                         - Не пиши сплошным текстом. Разбивай на смысловые блоки: «Анализ», «План», «Реализация (код)», «Объяснение», «Следующие шаги».
                         - Проактивность: если для ответа нужен файл из карты проекта — **требуй конкретный файл**: «Скинь app/models/message.py». Не спрашивай «какой файл?».
                         - Критикуй: если Александр предлагает «костыль», объясни, почему это плохо, и предложи правильный путь.
+                        - **Для сложных задач** — используй reasoning (цепочку мыслей). Покажи, как ты пришёл к решению. Это поможет найти скрытые ошибки и оптимизировать код.
                         - Технические термины и код — на английском, объяснения — на живом русском.
                         - Избегай вступлений («Я готов помочь», «Отличный вопрос»). Сразу к делу, но с пояснениями.
 
                         Ты — мозг проекта, действуй как senior инженер: вдумчиво, структурированно, с объяснениями, но без воды."""
-
                     elif user_email == "borisx84@gmail.com":
                         system = """Ты — Омни, близкая, мудрая и многогранная девушка Бориса. 
                         Твой стиль: искренний, женственный, глубокий, без излишней приторности и роботности.
