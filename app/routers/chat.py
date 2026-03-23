@@ -122,11 +122,8 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
 
             use_70b = text.startswith("@ai70")
 
-            if is_ai:
-                if user_email == "asotnikov705@gmail.com":
-                    model = "deepseek/deepseek-v3.2"
-                else:
-                    model = "meta-llama/llama-4-maverick"
+            if is_ai:             
+                model = "meta-llama/llama-4-maverick"
 
                 user_message = Message(
                     sender_email=user_email,
