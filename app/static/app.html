@@ -298,6 +298,15 @@
             .message p {
                 margin-bottom: 6px;
             }
+            .typing-dots {
+                animation: blink 1.4s infinite;
+                font-size: 18px;
+                letter-spacing: 2px;
+            }
+            @keyframes blink {
+                0%, 100% { opacity: 0.2; }
+                50% { opacity: 1; }
+            }
          
     </style>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -642,6 +651,7 @@
                         tick.style.color = "#4caf50";
                     });
                 } else if (data.from === "ai-bot@omni" && (data.chat_with === currentContact || currentContact === "ai-bot@omni")) {
+                    hideAiTypingIndicator();
                     addMessage(data.message, "in", null, data.id, false, null, null, true);
                 } else if (data.from === email && data.to === currentContact) {
                     addMessage(data.message, "out", null, data.id, false, null, null);
@@ -779,7 +789,39 @@
                     }, i * 100);
                 }
             }
-        }    
+        } 
+        let aiTypingElement = null;
+
+        function showAiTypingIndicator() {
+            if (aiTypingElement) return; 
+            
+            const messagesDiv = document.getElementById("messages");
+            const typingMsg = document.createElement("div");
+            typingMsg.className = "message in ai-typing";
+            typingMsg.style.background = "#2a2a2a";
+            typingMsg.style.opacity = "0.7";
+            typingMsg.style.display = "flex";
+            typingMsg.style.alignItems = "center";
+            typingMsg.style.gap = "8px";
+            typingMsg.innerHTML = `
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span>🤖</span>
+                    <span>Omni AI печатает</span>
+                    <span class="typing-dots">...</span>
+                </div>
+            `;
+            messagesDiv.appendChild(typingMsg);
+            aiTypingElement = typingMsg;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function hideAiTypingIndicator() {
+            if (aiTypingElement) {
+                aiTypingElement.remove();
+                aiTypingElement = null;
+            }
+        }
+        
         let typingTimeout = null;
 
         let replyToId = null;
@@ -884,6 +926,12 @@
                 message: text,
                 reply_to_id: replyToId
             }));
+            if (text.startsWith("@ai") || currentContact === "ai-bot@omni") {
+                showAiTypingIndicator();
+            setTimeout(() => {
+                hideAiTypingIndicator();
+            }, 15000); 
+            }
             if (!text.startsWith("@ai") && currentContact !== "ai-bot@omni") {
                 addMessage(text, "out", null, null, false, replyToId, replyToText);
             }
