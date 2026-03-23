@@ -273,8 +273,34 @@
                 border-radius: 2px;
                 background: rgba(0,0,0,0.2);
             }
+            .message pre {
+                background: #1e1e1e;
+                border-radius: 6px;
+                padding: 12px;
+                overflow-x: auto;
+                margin: 8px 0;
+            }
+            .message code {
+                font-family: monospace;
+                font-size: 13px;
+                background: #2a2a2a;
+                padding: 2px 4px;
+                border-radius: 4px;
+            }
+            .message pre code {
+                background: none;
+                padding: 0;
+            }
+            .message h1, .message h2, .message h3 {
+                margin-top: 12px;
+                margin-bottom: 8px;
+            }
+            .message p {
+                margin-bottom: 6px;
+            }
          
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body> 
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
@@ -664,9 +690,10 @@
                 img.onclick = () => openLightbox(img.src);
                 msg.appendChild(img);
             } else {
-                const textEl = document.createElement("span");
-                textEl.innerText = text;
-                msg.appendChild(textEl);
+                const htmlContent = marked.parse(text);
+                const contentDiv = document.createElement("div");
+                contentDiv.innerHTML = htmlContent;
+                msg.appendChild(contentDiv);
             }
             
             const meta = document.createElement("div");
