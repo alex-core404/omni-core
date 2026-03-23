@@ -7,6 +7,9 @@ import json
 from app.database import get_db, SessionLocal
 from app.models.message import Message
 from openai import AsyncOpenAI
+from app.models.knowledge import Knowledge
+from app.utils.embeddings import get_embedding
+from sqlalchemy import select
 import os
 import re
 
@@ -44,11 +47,40 @@ class ConnectionManager:
                     "reply_to_text": reply_to_text
                 })
             )
-async def ask_ai(user_message: str, context_messages: list, model: str = "meta-llama/llama-4-maverick", system_prompt: str = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально. Только на русском языке.", is_personal_ai: bool = False, user_email: str = None) -> str:
+
+async def get_context_from_db(query: str, db: Session):
+    query_vector = await get_embedding(query)
+    if not query_vector:
+        return ""
+    
+    try:
+        stmt = select(Knowledge).order_by(Knowledge.embedding.l2_distance(query_vector)).limit(5)
+        result = db.execute(stmt)
+        chunks = result.scalars().all()
+
+        if not chunks:
+            return ""
+
+        context_parts = []
+        for c in chunks:
+            context_parts.append(f"--- FILE: {c.file_path} ---\n{c.content}")
+        return "\n\n".join(context_parts)
+    except Exception as e:
+        print(f"Ошибка RAG-поиска: {e}")
+        return ""
+async def ask_ai(user_message: str, context_messages: list, model: str = "meta-llama/llama-4-maverick", system_prompt: str = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально. Только на русском языке.", is_personal_ai: bool = False, user_email: str = None, db: Session = None) -> str:
+    db_context = ""
+    if user_email == "asotnikov705@gmail.com" and db:
+        db_context = await get_context_from_db(user_message, db)
+    
+    final_system_prompt = system_prompt
+    if db_context:
+        final_system_prompt += f"\n\nИспользуй этот КОНТЕКСТ ИЗ ТВОИХ ФАЙЛОВ для ответа:\n{db_context}"
+ 
     messages = [
         {
             "role": "system",
-            "content": system_prompt
+            "content": final_system_prompt
         }
     ]
     for msg in context_messages:
@@ -174,7 +206,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                 
                 if is_personal_ai:
                     if user_email == "asotnikov705@gmail.com":
-                        context_count = 30
+                        context_count = 10
                     else:
                         context_count = 50
                  
@@ -266,15 +298,17 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                         - **Оформление:** используй Markdown: заголовки (##), жирный шрифт (** **), блоки кода (```), списки, чтобы ответ был удобным для чтения."""
 
 
-                history = db.query(Message).filter(
+                messages_for_ai = db.query(Message).filter(
                     ((Message.sender_email == user_email) & (Message.recipient_email == message_data["to"])) |
                     ((Message.sender_email == message_data["to"]) & (Message.recipient_email == user_email))
                 ).order_by(Message.created_at.desc()).limit(context_count).all()
-                history.reverse()
-                context = [{"from": m.sender_email, "message": decrypt_message(m.content)} for m in history]
+                
+                messages_for_ai = [
+                    {"from": m.sender_email, "message": decrypt_message(m.content)} 
+                    for m in reversed(messages_for_ai)
+                ]
 
-
-                ai_response = await ask_ai(text, context, model, system, is_personal_ai=is_personal_ai, user_email=user_email)
+                ai_response = await ask_ai(text, messages_for_ai, model, system, is_personal_ai=is_personal_ai, user_email=user_email, db=db)
 
                 ai_message = Message(
                     sender_email="ai-bot@omni",
