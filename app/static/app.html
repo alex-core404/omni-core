@@ -714,6 +714,9 @@
                 const contentDiv = document.createElement("div");
                 contentDiv.innerHTML = htmlContent;
                 msg.appendChild(contentDiv);
+                contentDiv.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightElement(block);
+                });
             }
             
             const meta = document.createElement("div");
