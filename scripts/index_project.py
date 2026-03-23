@@ -17,9 +17,9 @@ FILES_TO_INDEX = [
 ]
 
 async def index_project():
-    async with SessionLocal() as session:
-        print("🚀 Начинаю индексацию проекта...")
+    print("🚀 Начинаю индексацию проекта...")
 
+    with SessionLocal() as session:
         for file_path in FILES_TO_INDEX:
             if not os.path.exists(file_path):
                 print(f"⚠️ Файл не найден: {file_path}")
@@ -40,7 +40,7 @@ async def index_project():
                 session.add(knowledge)
                 print(f"✅ Файл {file_path} 'оцифрован'.")
 
-        await session.commit()
+        session.commit()
         print("🎉 Индексация завершена!")
 if __name__ == "__main__":
     asyncio.run(index_project())
