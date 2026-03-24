@@ -69,9 +69,15 @@ async def get_context_from_db(query: str, db: Session):
         print(f"Ошибка RAG-поиска: {e}")
         return ""
 async def ask_ai(user_message: str, context_messages: list, model: str = "meta-llama/llama-4-maverick", system_prompt: str = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально. Только на русском языке.", is_personal_ai: bool = False, user_email: str = None, db: Session = None) -> str:
+    print(f"🔵 ask_ai вызвана для {user_email}, db={db is not None}")
+    
     db_context = ""
     if user_email == "asotnikov705@gmail.com" and db:
+        print("✅ RAG активирован")
         db_context = await get_context_from_db(user_message, db)
+        print(f"📚 Контекст получен: {len(db_context)} символов")
+    else:
+        print(f"❌ RAG НЕ активирован: user_email={user_email}, db={db is not None}")
     
     final_system_prompt = system_prompt
     if db_context:
