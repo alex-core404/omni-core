@@ -12,9 +12,27 @@ from app.utils.embeddings import get_embedding
 FILES_TO_INDEX = [
     "app/main.py",
     "app/database.py",
+    "app/crypto.py",
+    "app/routers/auth.py",
     "app/routers/chat.py",
-    "app/static/app.html" 
+    "app/routers/history.py",
+    "app/routers/contacts.py",
+    "app/routers/admin.py",
+    "app/routers/upload.py",
+    "app/routers/reactions.py",
+    "app/models/user.py",
+    "app/models/message.py",
+    "app/models/contact.py",
+    "app/models/reaction.py",
+    "app/models/knowledge.py",
+    "app/utils/embeddings.py",
+    "app/schemas/user.py",
+    "app/static/index.html",
+    "app/static/app.html",
+    "app/static/chat.html",
+    "app/static/profile.html",
 ]
+
 
 async def index_project():
     print("🚀 Начинаю индексацию проекта...")
