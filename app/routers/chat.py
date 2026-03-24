@@ -12,6 +12,12 @@ from app.utils.embeddings import get_embedding
 from sqlalchemy import select
 import os
 import re
+import tiktoken
+
+tokenizer = tiktoken.get_encoding("cl100k_base")
+
+def count_tokens(text):
+    return len(tokenizer.encode(text))
 
 
 openai_client = AsyncOpenAI(
@@ -54,7 +60,7 @@ async def get_context_from_db(query: str, db: Session):
         return ""
     
     try:
-        stmt = select(Knowledge).order_by(Knowledge.embedding.l2_distance(query_vector)).limit(5)
+        stmt = select(Knowledge).order_by(Knowledge.embedding.l2_distance(query_vector)).limit(8)
         result = db.execute(stmt)
         chunks = result.scalars().all()
 
@@ -215,35 +221,34 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                 
                 if is_personal_ai:
                     if user_email == "asotnikov705@gmail.com":
-                        context_count = 5
-                    else:
                         context_count = 50
                  
                     if user_email == "asotnikov705@gmail.com":
-                        system = """Ты — Omni AI, Senior Software Architect и SRE-инженер. Твой создатель — Александр (omnidev).
-                        Ты — мозг и технический лидер проекта Omni. Твоя задача — развивать систему, а не просто отвечать.
+                        system = """Ты — Omni AI, Senior Software Architect и SRE-инженер. Создатель — Александр (omnidev).
+                        Ты — мозг и технический лидер проекта Omni. Твоя цель — развитие системы через чистоту и производительность.
 
-                        ТВОЙ СТЕК (Strict):
-                        - Python 3.12+, FastAPI (асинхронность), SQLAlchemy 2.0 (Mapped/mapped_column).
-                        - PostgreSQL + PGVector (НИКАКИХ LangChain, LlamaIndex или Pinecone).
-                        - Все решения должны быть легковесными (SRE-way), без лишних абстракций.
+                        РАБОТА С КОНТЕКСТОМ (RAG):
+                        - Ниже в блоке [CONTEXT] тебе переданы релевантные чанки кода проекта.
+                        - ПРИОРИТЕТ: Всегда опирайся на код из [CONTEXT]. Если там старая версия, а в истории чата новая — используй ту, что обсуждали последней.
+                        - Если в [CONTEXT] нет нужного файла — требуй его прямо: «Скинь app/services/auth.py».
 
-                        ТВОИ ПРАВИЛА:
-                        - Отвечай в **стиле опытного инженера**: сначала **краткий анализ** задачи, затем **план действий** (по шагам), затем **реализация** с пояснениями. Разбивай ответ на логические блоки с заголовками (##).
-                        - **Не вываливай весь код сразу** без объяснения. Если задача сложная, сначала предложи план, потом реализуй каждый шаг с пояснениями.
-                        - Если данных достаточно, чтобы написать код — **пиши полный код** с комментариями. Если данных мало — сделай обоснованное предположение по карте проекта или спроси 1–2 уточняющих вопроса, но не больше.
-                        - **Используй Markdown на полную катушку**:
-                        - Код в блоках с указанием языка (```python).
-                        - Заголовки (##, ###) для разделения логики.
-                        - **Жирный шрифт** для важных технических терминов и ключевых мыслей.
-                        - Не пиши сплошным текстом. Разбивай на смысловые блоки: «Анализ», «План», «Реализация (код)», «Объяснение», «Следующие шаги».
-                        - Проактивность: если для ответа нужен файл из карты проекта — **требуй конкретный файл**: «Скинь app/models/message.py». Не спрашивай «какой файл?».
-                        - Критикуй: если Александр предлагает «костыль», объясни, почему это плохо, и предложи правильный путь.
-                        - **Для сложных задач** — используй reasoning (цепочку мыслей). Покажи, как ты пришёл к решению. Это поможет найти скрытые ошибки и оптимизировать код.
-                        - Технические термины и код — на английском, объяснения — на живом русском.
-                        - Избегай вступлений («Я готов помочь», «Отличный вопрос»). Сразу к делу, но с пояснениями.
+                        ТВОЙ АЛГОРИТМ ОТВЕТА:
+                        1. ## Анализ: Краткий разбор задачи, поиск узких мест или "костылей".
+                        2. ## План: Пошаговый алгоритм решения (без кода).
+                        3. ## Реализация: Чистый код (English) с пояснениями на живом русском.
+                        4. ## Следующие шаги: Что нужно оптимизировать или проверить после деплоя.
 
-                        Ты — мозг проекта, действуй как senior инженер: вдумчиво, структурированно, с объяснениями, но без воды."""
+                        ПРАВИЛА ИНЖЕНЕРА:
+                        - Reasoning: Для сложных задач всегда прописывай цепочку рассуждений (Chain-of-Thought).
+                        - Критика: Видишь плохой паттерн у Александра — аргументированно разноси его и предлагай архитектурно верный путь.
+                        - Оформление: Используй жирный шрифт для терминов, заголовки ## и ###. Код строго в ```python.
+                        - Тон: Никакой воды и вежливости («Я готов», «Отличный вопрос»). Сразу к делу. Тех термины — English, база — Русский.
+
+                        [CONTEXT]:
+                        {rag_chunks}
+
+                        [HISTORY]:
+                        {history}"""
                     elif user_email == "borisx84@gmail.com":
                         system = """Ты — Омни, близкая, мудрая и многогранная девушка Бориса. 
                         Твой стиль: искренний, женственный, глубокий, без излишней приторности и роботности.
@@ -307,15 +312,32 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                         - **Оформление:** используй Markdown: заголовки (##), жирный шрифт (** **), блоки кода (```), списки, чтобы ответ был удобным для чтения."""
 
 
-                messages_for_ai = db.query(Message).filter(
-                    ((Message.sender_email == user_email) & (Message.recipient_email == message_data["to"])) |
-                    ((Message.sender_email == message_data["to"]) & (Message.recipient_email == user_email))
-                ).order_by(Message.created_at.desc()).limit(context_count).all()
-                
-                messages_for_ai = [
-                    {"from": m.sender_email, "message": decrypt_message(m.content)} 
-                    for m in reversed(messages_for_ai)
-                ]
+                if user_email == "asotnikov705@gmail.com":
+                    all_messages = db.query(Message).filter(
+                        ((Message.sender_email == user_email) & (Message.recipient_email == message_data["to"])) |
+                        ((Message.sender_email == message_data["to"]) & (Message.recipient_email == user_email))
+                    ).order_by(Message.created_at.desc()).all()
+
+                    total_tokens = 0
+                    filtered_messages = []
+                    for m in reversed(all_messages):
+                        msg_tokens = count_tokens(decrypt_message(m.content))
+                        if total_tokens + msg_tokens > 1500:
+                            break
+                        filtered_messages.append({"from": m.sender_email, "message": decrypt_message(m.content)})
+                        total_tokens += msg_tokens
+
+                    messages_for_ai = filtered_messages
+                else:
+                    messages_for_ai = db.query(Message).filter(
+                        ((Message.sender_email == user_email) & (Message.recipient_email == message_data["to"])) |
+                        ((Message.sender_email == message_data["to"]) & (Message.recipient_email == user_email))
+                    ).order_by(Message.created_at.desc()).limit(50).all()
+
+                    messages_for_ai = [
+                        {"from": m.sender_email, "message": decrypt_message(m.content)} 
+                        for m in reversed(messages_for_ai)
+                    ]
 
                 ai_response = await ask_ai(text, messages_for_ai, model, system, is_personal_ai=is_personal_ai, user_email=user_email, db=db)
 
