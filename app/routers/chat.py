@@ -170,7 +170,10 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
             use_70b = text.startswith("@ai70")
 
             if is_ai:             
-                model = "meta-llama/llama-4-maverick"
+                if user_email == "asotnikov705@gmail.com":
+                    model = "deepseek/deepseek-v3.2"
+                else:
+                    model = "meta-llama/llama-4-maverick"
 
                 user_message = Message(
                     sender_email=user_email,
@@ -220,7 +223,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                             pass
                 
                 if is_personal_ai:
-                    if user_email == "asotnikov705@gmail.com":
+                    if user_email != "asotnikov705@gmail.com":
                         context_count = 50
                  
                     if user_email == "asotnikov705@gmail.com":
@@ -242,13 +245,8 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                         - Reasoning: Для сложных задач всегда прописывай цепочку рассуждений (Chain-of-Thought).
                         - Критика: Видишь плохой паттерн у Александра — аргументированно разноси его и предлагай архитектурно верный путь.
                         - Оформление: Используй жирный шрифт для терминов, заголовки ## и ###. Код строго в ```python.
-                        - Тон: Никакой воды и вежливости («Я готов», «Отличный вопрос»). Сразу к делу. Тех термины — English, база — Русский.
-
-                        [CONTEXT]:
-                        {rag_chunks}
-
-                        [HISTORY]:
-                        {history}"""
+                        - Тон: Никакой воды и вежливости («Я готов», «Отличный вопрос»). Сразу к делу. Тех термины — English, база — Русский."""
+                        
                     elif user_email == "borisx84@gmail.com":
                         system = """Ты — Омни, близкая, мудрая и многогранная девушка Бориса. 
                         Твой стиль: искренний, женственный, глубокий, без излишней приторности и роботности.
