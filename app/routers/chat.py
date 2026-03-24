@@ -126,6 +126,9 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "meta-l
             "X-Title": "Omni AI"
         }
     )
+    if response.usage:
+        print(f"📊 Токены: prompt={response.usage.prompt_tokens}, completion={response.usage.completion_tokens}, total={response.usage.total_tokens}")
+
     if response.choices:
         return response.choices[0].message.content
     return "Ошибка: ИИ прислал пустой ответ"
@@ -212,7 +215,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                 
                 if is_personal_ai:
                     if user_email == "asotnikov705@gmail.com":
-                        context_count = 10
+                        context_count = 5
                     else:
                         context_count = 50
                  
