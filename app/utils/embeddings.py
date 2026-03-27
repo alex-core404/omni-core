@@ -12,7 +12,7 @@ async def get_embedding(text: str) -> list[float]:
     try:
         clean_text = text.replace("\n", " ").strip()
         response = await client.embeddings.create(
-            model="text-embedding-3-small",
+            model="openai/text-embedding-3-small",
             input=[clean_text]
         )
         return response.data[0].embedding
