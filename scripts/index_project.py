@@ -12,7 +12,7 @@ from app.utils.embeddings import get_embedding
 
 tokenizer = tiktoken.get_encoding("cl100k_base")
 
-def chunk_by_tokens(text, chunk_tokens=800, overlap_tokens=200):
+def chunk_by_tokens(text, chunk_tokens=400, overlap_tokens=50):
     tokens = tokenizer.encode(text)
     chunks = []
     step = chunk_tokens - overlap_tokens
@@ -74,7 +74,7 @@ async def index_project():
                 vector = await get_embedding(chunk)
                 if vector:
                     knowledge = Knowledge(
-                        content=chunk,
+                        content=f"# FILE: {file_path}\n\n{chunk}",
                         file_path=f"{file_path} (часть {i+1})",
                         embedding=vector
                     )

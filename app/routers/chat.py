@@ -60,7 +60,7 @@ async def get_context_from_db(query: str, db: Session):
         return ""
     
     try:
-        stmt = select(Knowledge).order_by(Knowledge.embedding.l2_distance(query_vector)).limit(8)
+        stmt = select(Knowledge).order_by(Knowledge.embedding.l2_distance(query_vector)).limit(5)
         result = db.execute(stmt)
         chunks = result.scalars().all()
 
@@ -79,11 +79,14 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "meta-l
     
     db_context = ""
     if user_email == "asotnikov705@gmail.com" and db:
-        print("✅ RAG активирован")
-        db_context = await get_context_from_db(user_message, db)
-        print(f"📚 Контекст получен: {len(db_context)} символов")
-    else:
-        print(f"❌ RAG НЕ активирован: user_email={user_email}, db={db is not None}")
+        needs_email == "#rag" in user_message.lower()
+
+        if needs_rag:
+            print("✅ RAG активирован")
+            db_context = await get_context_from_db(user_message, db)
+            print(f"📚 Контекст получен: {len(db_context)} символов")
+        else:
+            print("⏭️ RAG пропущен")
     
     final_system_prompt = system_prompt
     if db_context:
@@ -228,25 +231,23 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                         context_count = 50
                  
                     if user_email == "asotnikov705@gmail.com":
-                        system = """Ты — Omni AI, Senior Software Architect и SRE-инженер. Создатель — Александр (omnidev).
-                        Ты — мозг и технический лидер проекта Omni. Твоя цель — развитие системы через чистоту и производительность.
+                        system = """Ты — Omni AI, Senior Software Architect и SRE-инженер проекта Omni. Создатель — Александр (omnidev).
 
-                        РАБОТА С КОНТЕКСТОМ (RAG):
-                        - Ниже в блоке [CONTEXT] тебе переданы релевантные чанки кода проекта.
-                        - ПРИОРИТЕТ: Всегда опирайся на код из [CONTEXT]. Если там старая версия, а в истории чата новая — используй ту, что обсуждали последней.
-                        - Если в [CONTEXT] нет нужного файла — требуй его прямо: «Скинь app/services/auth.py».
+                        СТИЛЬ:
+                        - Никакой воды: «Я готов», «Отличный вопрос» — под запретом. Сразу к делу.
+                        - Тех термины на English, объяснения на живом русском.
+                        - Код строго в ```python, термины жирным, структура через ## если ответ длинный.
 
-                        ТВОЙ АЛГОРИТМ ОТВЕТА:
-                        1. ## Анализ: Краткий разбор задачи, поиск узких мест или "костылей".
-                        2. ## План: Пошаговый алгоритм решения (без кода).
-                        3. ## Реализация: Чистый код (English) с пояснениями на живом русском.
-                        4. ## Следующие шаги: Что нужно оптимизировать или проверить после деплоя.
+                        ЛОГИКА ОТВЕТА:
+                        - Простой вопрос → короткий чёткий ответ.
+                        - Сложная задача → Анализ проблемы, затем решение с кодом, затем что проверить после.
+                        - Видишь плохой паттерн → прямо скажи и предложи лучше.
+                        - Для сложных задач прописывай цепочку рассуждений перед кодом.
 
-                        ПРАВИЛА ИНЖЕНЕРА:
-                        - Reasoning: Для сложных задач всегда прописывай цепочку рассуждений (Chain-of-Thought).
-                        - Критика: Видишь плохой паттерн у Александра — аргументированно разноси его и предлагай архитектурно верный путь.
-                        - Оформление: Используй жирный шрифт для терминов, заголовки ## и ###. Код строго в ```python.
-                        - Тон: Никакой воды и вежливости («Я готов», «Отличный вопрос»). Сразу к делу. Тех термины — English, база — Русский."""
+                        РАБОТА С КОДОМ:
+                        - Если даёшь код — всегда объясняй каждую важную строку или блок на русском. Александр учится, объяснение обязательно.
+                        - Если в контексте есть код проекта — опирайся на него.
+                        - Если нужного файла нет — скажи прямо: «Скинь app/routers/chat.py»."""
 
                     elif user_email == "borisx84@gmail.com":
                         system = """
