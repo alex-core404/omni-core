@@ -79,7 +79,7 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "meta-l
     
     db_context = ""
     if user_email == "asotnikov705@gmail.com" and db:
-        needs_email == "#rag" in user_message.lower()
+        needs_rag = "#rag" in user_message.lower()
 
         if needs_rag:
             print("✅ RAG активирован")
