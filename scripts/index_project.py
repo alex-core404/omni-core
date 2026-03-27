@@ -52,7 +52,7 @@ FILES_TO_INDEX = [
 
 
 async def index_project():
-    print("🚀 Начинаю индексацию проекта (чанкинг 800 токенов, overlap 200)...")
+    print("🚀 Начинаю индексацию проекта (чанкинг 400 токенов, overlap 50)...")
 
     with SessionLocal() as session:
         session.query(Knowledge).delete()
@@ -67,7 +67,7 @@ async def index_project():
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()   
 
-            chunks = chunk_by_tokens(content, chunk_tokens=800, overlap_tokens=200)
+            chunks = chunk_by_tokens(content, chunk_tokens=400, overlap_tokens=50)
             print(f"  Разбито на {len(chunks)} чанков")
             
             for i, chunk in enumerate(chunks):
