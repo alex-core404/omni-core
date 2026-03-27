@@ -108,8 +108,7 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "meta-l
 
         messages.append({"role": role, "content": content})
 
-    clean_user_message = user_message.replace("@ai70", "").replace("@ai", "").strip()
-
+    clean_user_message = user_message.replace("@ai70", "").replace("@ai", "").replace("#rag", "").strip()
     if not messages or messages[-1]["content"] != clean_user_message:
         if clean_user_message:
              messages.append({"role": "user", "content": clean_user_message})
@@ -246,8 +245,8 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
 
                         РАБОТА С КОДОМ:
                         - Если даёшь код — всегда объясняй каждую важную строку или блок на русском. Александр учится, объяснение обязательно.
-                        - Если в контексте есть код проекта — опирайся на него.
-                        - Если нужного файла нет — скажи прямо: «Скинь app/routers/chat.py»."""
+                        - Если в сообщении есть тег #rag — в контексте ОБЯЗАТЕЛЬНО будут реальные файлы проекта. Отвечай СТРОГО на основе этих файлов. Не придумывай то, чего нет в контексте. Если нужного файла нет в контексте — скажи прямо: «В контексте нет этого файла, скинь его».
+                        - Если #rag нет — можешь рассуждать общо, но если есть код в контексте — опирайся на него."""
 
                     elif user_email == "borisx84@gmail.com":
                         system = """
@@ -325,7 +324,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                     filtered_messages = []
                     for m in reversed(all_messages):
                         msg_tokens = count_tokens(decrypt_message(m.content))
-                        if total_tokens + msg_tokens > 1500:
+                        if total_tokens + msg_tokens > 6000:
                             break
                         filtered_messages.append({"from": m.sender_email, "message": decrypt_message(m.content)})
                         total_tokens += msg_tokens
