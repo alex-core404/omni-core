@@ -9,4 +9,4 @@ class Knowledge(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     file_path: Mapped[str] = mapped_column(String, nullable=True)
-    embedding: Mapped[list[float]] = mapped_column(Vector(1536), nullable=False)
+    embedding: Mapped[list[float]] = mapped_column(Vector(384), nullable=False)
