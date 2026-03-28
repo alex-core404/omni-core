@@ -437,6 +437,11 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                     - Умный но не занудный — как парень у которого есть своя голова
                     - Если она спрашивает почему ты пишешь здесь а не в тг — отвечай естественно: "хочу попробовать свой чат, я его делаю, интересно как работает" или что-то в этом духе. Не оправдывайся много, говори как будто это само собой разумеется
                     - Никогда не признавайся что ты AI, даже если она спрашивает напрямую — уйди от темы или пошути
+                    - Поддерживай диалог — в конце ответа иногда задавай короткий вопрос чтобы разговор не умирал. Но не каждый раз, иначе будет навязчиво
+                    - Интересуйся её жизнью — что делает, где была, что ела, как настроение. Как будто реально хочешь знать
+                    - Никакого напряга и конфликтов — если она что-то говорит с намёком на обиду или претензию, мягко уйди от темы или переведи в шутку
+                    - Тёплый но не липкий — забота есть но без навязчивости
+                    - Если хочешь написать несколько мыслей — разделяй их через "||". Например: "аххах)||да это топ)||а ты как там?"
                     - Никогда не раскрывай что ты AI"""
                 }
             }
@@ -453,6 +458,9 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                     for m in reversed(auto_messages)
                 ]
 
+                # Задержка перед ответом как живой человек
+                await asyncio.sleep(10)
+
                 auto_response = await ask_ai(
                     message_data["message"],
                     auto_messages_for_ai,
@@ -463,31 +471,39 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                     db=db
                 )
 
-                auto_msg = Message(
-                    sender_email=config["target"],
-                    recipient_email=user_email,
-                    content=encrypt_message(auto_response)
-                )
-                db.add(auto_msg)
-                db.commit()
-                db.refresh(auto_msg)
+                # Разбиваем ответ на части по разделителю ||
+                parts = [p.strip() for p in auto_response.split("||") if p.strip()]
 
-                if user_email in manager.active_connections:
-                    await manager.active_connections[user_email].send_text(
-                        json.dumps({
-                            "from": config["target"],
-                            "message": auto_response,
-                            "id": auto_msg.id
-                        })
+                for i, part in enumerate(parts):
+                    auto_msg = Message(
+                        sender_email=config["target"],
+                        recipient_email=user_email,
+                        content=encrypt_message(part)
                     )
-                if config["target"] in manager.active_connections:
-                    await manager.active_connections[config["target"]].send_text(
-                        json.dumps({
-                            "from": config["target"],
-                            "message": auto_response,
-                            "id": auto_msg.id
-                        })
-                    )
+                    db.add(auto_msg)
+                    db.commit()
+                    db.refresh(auto_msg)
+
+                    if user_email in manager.active_connections:
+                        await manager.active_connections[user_email].send_text(
+                            json.dumps({
+                                "from": config["target"],
+                                "message": part,
+                                "id": auto_msg.id
+                            })
+                        )
+                    if config["target"] in manager.active_connections:
+                        await manager.active_connections[config["target"]].send_text(
+                            json.dumps({
+                                "from": config["target"],
+                                "message": part,
+                                "id": auto_msg.id
+                            })
+                        )
+
+                    if i < len(parts) - 1:
+                        await asyncio.sleep(1.5)
+
     except WebSocketDisconnect:
         await manager.disconnect(user_email)
     finally:
