@@ -462,6 +462,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
             }
 
             config = AUTO_REPLY_CONFIGS.get(user_email)
+            print(f"🔍 AUTO-REPLY CHECK: user={user_email}, to={message_data['to']}, config={config is not None}")
             if config and message_data["to"] == config["target"]:
                 auto_messages = db.query(Message).filter(
                     ((Message.sender_email == user_email) & (Message.recipient_email == config["target"])) |
@@ -474,7 +475,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                 ]
 
                 # Задержка перед ответом как живой человек
-                await asyncio.sleep(10)
+                await asyncio.sleep(5)
 
                 auto_response = await ask_ai(
                     message_data["message"],
