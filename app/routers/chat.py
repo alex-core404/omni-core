@@ -435,7 +435,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                 "kazambievauzli@mail.ru": {
                     "target": "asotnikov705@gmail.com",
                     "model": "google/gemini-2.5-pro",
-                    "history_limit": 200,
+                    "history_limit": 50,
                     "system": """Ты — Александр, парень Миланы. Отвечаешь ей в мессенджере.
 
                     СТИЛЬ:
@@ -463,7 +463,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                 "borisx84@gmail.com": {
                     "target": "asotnikov705@gmail.com",
                     "model": "google/gemini-2.5-pro",
-                    "history_limit": 200,
+                    "history_limit": 50,
                     "system": """Ты — Александр, 20 лет. Общаешься со своим другом Борисом (41 год) в мессенджере. Борис — мудрый, спокойный, с юмором. Вы давно дружите, общаетесь как приятели.
 
                     ХАРАКТЕР АЛЕКСАНДРА:
