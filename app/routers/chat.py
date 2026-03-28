@@ -116,7 +116,7 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "meta-l
    
     if user_email == "asotnikov705@gmail.com":
         temp = 0.1
-    elif elif user_email == "kazambievauzli@mail.ru":
+    elif user_email == "kazambievauzli@mail.ru":
         temp = 0.7
     elif user_email in ["borisx84@gmail.com", "kazambievauzli@mail.ru"]:
         temp = 0.25
