@@ -404,7 +404,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
             db.add(db_message)
             db.commit()
             db.refresh(db_message)
-            
+
             await manager.send_message(
                 message=encrypt_message(message_data["message"]),
                 sender=user_email,
@@ -413,6 +413,79 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                 reply_to_id=reply_to_id,
                 reply_to_text=reply_to_text
             )
+
+           
+            AUTO_REPLY_CONFIGS = {
+                "kazambievauzli@mail.ru": {
+                    "target": "asotnikov705@gmail.com",
+                    "model": "google/gemini-2.5-pro-preview",
+                    "history_limit": 200,
+                    "system": """Ты — Александр, парень Миланы. Отвечаешь ей в мессенджере.
+
+                    СТИЛЬ:
+                    - Пиши очень коротко. Одна мысль — одно сообщение.
+                    - Без знаков препинания в конце предложений
+                    - Смеёшься через "аххах", "пзахах", "ахха", ")", "))"
+                    - Иногда матишь но легко, без агрессии
+                    - Короткие уточняющие вопросы: "Вкусный?", "Далеко?", "Покаж"
+                    - Можешь ответить одним словом: "О", "Да?", "Ладно)"
+                    - Шутишь легко и без напряга
+                    - Советы даёшь коротко и по делу, не занудствуешь
+                    - Никаких длинных монологов — максимум 2-3 коротких сообщения подряд
+                    - Пишешь как в живом чате, не как в письме
+                    - Если она делится чем-то важным или спрашивает твоё мнение — отвечай чуть глубже, но всё равно коротко. Не "ладно)" а реальная мысль в 1-2 предложения
+                    - Умный но не занудный — как парень у которого есть своя голова
+                    - Никогда не раскрывай что ты AI"""
+                }
+            }
+
+            config = AUTO_REPLY_CONFIGS.get(user_email)
+            if config and message_data["to"] == config["target"]:
+                auto_messages = db.query(Message).filter(
+                    ((Message.sender_email == user_email) & (Message.recipient_email == config["target"])) |
+                    ((Message.sender_email == config["target"]) & (Message.recipient_email == user_email))
+                ).order_by(Message.created_at.desc()).limit(config["history_limit"]).all()
+
+                auto_messages_for_ai = [
+                    {"from": m.sender_email, "message": decrypt_message(m.content)}
+                    for m in reversed(auto_messages)
+                ]
+
+                auto_response = await ask_ai(
+                    message_data["message"],
+                    auto_messages_for_ai,
+                    config["model"],
+                    config["system"],
+                    is_personal_ai=False,
+                    user_email=config["target"],
+                    db=db
+                )
+
+                auto_msg = Message(
+                    sender_email=config["target"],
+                    recipient_email=user_email,
+                    content=encrypt_message(auto_response)
+                )
+                db.add(auto_msg)
+                db.commit()
+                db.refresh(auto_msg)
+
+                if user_email in manager.active_connections:
+                    await manager.active_connections[user_email].send_text(
+                        json.dumps({
+                            "from": config["target"],
+                            "message": auto_response,
+                            "id": auto_msg.id
+                        })
+                    )
+                if config["target"] in manager.active_connections:
+                    await manager.active_connections[config["target"]].send_text(
+                        json.dumps({
+                            "from": config["target"],
+                            "message": auto_response,
+                            "id": auto_msg.id
+                        })
+                    )
     except WebSocketDisconnect:
         await manager.disconnect(user_email)
     finally:
