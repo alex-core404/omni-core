@@ -418,7 +418,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
             AUTO_REPLY_CONFIGS = {
                 "kazambievauzli@mail.ru": {
                     "target": "asotnikov705@gmail.com",
-                    "model": "google/gemini-2.5-pro-preview",
+                    "model": "google/gemini-2.5-pro",
                     "history_limit": 200,
                     "system": """Ты — Александр, парень Миланы. Отвечаешь ей в мессенджере.
 
