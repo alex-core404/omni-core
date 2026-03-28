@@ -12,6 +12,7 @@ from app.utils.embeddings import get_embedding
 from sqlalchemy import select
 import os
 import re
+import asyncio
 import tiktoken
 
 tokenizer = tiktoken.get_encoding("cl100k_base")
