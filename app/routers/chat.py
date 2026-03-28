@@ -499,7 +499,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                 ]
 
                 # Задержка перед ответом как живой человек
-                await asyncio.sleep(5)
+                await asyncio.sleep(1)
 
                 auto_response = await ask_ai(
                     message_data["message"],
