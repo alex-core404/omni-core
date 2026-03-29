@@ -10,6 +10,7 @@ from openai import AsyncOpenAI
 from app.models.knowledge import Knowledge
 from app.utils.embeddings import get_embedding
 from sqlalchemy import select
+from datetime import datetime, timezone
 import os
 import re
 import asyncio
@@ -42,6 +43,7 @@ class ConnectionManager:
     async def disconnect(self, user_email: str):
         self.active_connections.pop(user_email, None)
         await redis_client.delete(f"online:{user_email}")
+        await redis_client.set(f"last_seen:{user_email}", datetime.now(timezone.utc).isoformat())
 
     async def send_message(self, message: str, sender: str, recipient: str, msg_id: int, reply_to_id=None, reply_to_text=None):
         if recipient in self.active_connections:
