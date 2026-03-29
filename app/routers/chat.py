@@ -508,7 +508,17 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                     for m in reversed(auto_messages)
                 ]
 
-                # Задержка перед ответом как живой человек
+                from datetime import datetime, timezone
+                last_reply = db.query(Message).filter(
+                    Message.sender_email == config["target"],
+                    Message.recipient_email == user_email
+                ).order_by(Message.created_at.desc()).first()
+
+                if last_reply:
+                    seconds_ago = (datetime.now(timezone.utc) - last_reply.created_at.replace(tzinfo=timezone.utc)).total_seconds()
+                    if seconds_ago < 30:
+                        continue
+
                 await asyncio.sleep(1)
 
                 auto_response = await ask_ai(
