@@ -657,6 +657,13 @@
                     addMessage(data.message, "out", null, data.id, false, null, null);
                 } else if (data.from === currentContact) {
                     addMessage(data.message, "in", null, data.id, false, data.reply_to_id, data.reply_to_text);
+                    fetch(`${API}/read/${email}/${currentContact}`, {
+                        method: "POST",
+                        headers: {"Authorization": `Bearer ${token}`}
+                    });
+                    if (ws) {
+                        ws.send(JSON.stringify({type: "read", to: currentContact}));
+                    }
                 }
             
             };
