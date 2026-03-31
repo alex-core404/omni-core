@@ -932,21 +932,18 @@
             const text = input.value.trim();
             if (!text || !currentContact || !ws) return;
 
-            const isAiRequest = text.startsWith("@ai") || currentContact === "ai-bot@omni";
+            // Добавляем своё сообщение сразу
+            addMessage(text, "out", null, null, false, replyToId, replyToText);
 
-            if (isAiRequest) {
-                addMessage(text, "out", null, null, false, replyToId, replyToText);
-            } else {
-                addMessage(text, "out", null, null, false, replyToId, replyToText);
-            }
-
+            // Отправляем
             ws.send(JSON.stringify({
                 to: currentContact, 
                 message: text,
                 reply_to_id: replyToId
             }));
 
-            if (isAiRequest) {
+            // Если это AI — показываем индикатор
+            if (text.startsWith("@ai") || currentContact === "ai-bot@omni") {
                 showAiTypingIndicator();
             }
 
