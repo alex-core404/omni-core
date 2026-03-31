@@ -755,7 +755,11 @@
 
             msg.appendChild(meta);
             msg.appendChild(reactionsBar);
-            div.appendChild(msg);
+            if (aiTypingElement && div.contains(aiTypingElement)) {
+                div.insertBefore(msg, aiTypingElement);
+            } else {
+                div.appendChild(msg);
+            }
             div.scrollTop = div.scrollHeight;
 
             
@@ -931,22 +935,20 @@
             const input = document.getElementById("message-input");
             const text = input.value.trim();
             if (!text || !currentContact || !ws) return;
-
-            // Добавляем своё сообщение сразу
-            addMessage(text, "out", null, null, false, replyToId, replyToText);
-
-            // Отправляем
             ws.send(JSON.stringify({
                 to: currentContact, 
                 message: text,
                 reply_to_id: replyToId
             }));
-
-            // Если это AI — показываем индикатор
             if (text.startsWith("@ai") || currentContact === "ai-bot@omni") {
                 showAiTypingIndicator();
+            setTimeout(() => {
+                hideAiTypingIndicator();
+            }, 15000); 
             }
-
+            if (!text.startsWith("@ai") && currentContact !== "ai-bot@omni") {
+                addMessage(text, "out", null, null, false, replyToId, replyToText);
+            }
             input.value = "";
             cancelReply();
         }
