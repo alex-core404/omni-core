@@ -931,20 +931,25 @@
             const input = document.getElementById("message-input");
             const text = input.value.trim();
             if (!text || !currentContact || !ws) return;
+
+            const isAiRequest = text.startsWith("@ai") || currentContact === "ai-bot@omni";
+
+            if (isAiRequest) {
+                addMessage(text, "out", null, null, false, replyToId, replyToText);
+            } else {
+                addMessage(text, "out", null, null, false, replyToId, replyToText);
+            }
+
             ws.send(JSON.stringify({
                 to: currentContact, 
                 message: text,
                 reply_to_id: replyToId
             }));
-            if (text.startsWith("@ai") || currentContact === "ai-bot@omni") {
+
+            if (isAiRequest) {
                 showAiTypingIndicator();
-            setTimeout(() => {
-                hideAiTypingIndicator();
-            }, 15000); 
             }
-            if (!text.startsWith("@ai") && currentContact !== "ai-bot@omni") {
-                addMessage(text, "out", null, null, false, replyToId, replyToText);
-            }
+
             input.value = "";
             cancelReply();
         }
