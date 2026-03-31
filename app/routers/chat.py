@@ -126,7 +126,7 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "meta-l
     else:
         temp = 0.25
 
-    max_tokens_limit = 2000 if is_personal_ai else 300
+    max_tokens_limit = 4000 if is_personal_ai else 300
 
     response = await openai_client.chat.completions.create(
         model=model,
@@ -180,6 +180,8 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
             if is_ai:             
                 if user_email == "asotnikov705@gmail.com":
                     model = "deepseek/deepseek-v3.2"
+                elif user_email == "kazambievauzli@mail.ru":
+                    model = "google/gemini-2.5-pro"
                 else:
                     model = "meta-llama/llama-4-maverick"
 
