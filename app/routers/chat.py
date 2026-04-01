@@ -122,7 +122,7 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "meta-l
     elif user_email == "kazambievauzli@mail.ru":
         temp = 0.7
     elif user_email == "borisx84@gmail.com":
-        temp = 0.25
+        temp = 0.4
     else:
         temp = 0.25
 
