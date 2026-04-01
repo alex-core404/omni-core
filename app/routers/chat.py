@@ -180,10 +180,8 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
             if is_ai:             
                 if user_email == "asotnikov705@gmail.com":
                     model = "deepseek/deepseek-v3.2"
-                elif user_email == "kazambievauzli@mail.ru":
-                    model = "google/gemini-3.1-pro-preview"
                 else:
-                    model = "meta-llama/llama-4-maverick"
+                    model = "google/gemini-3.1-pro-preview"
 
                 user_message = Message(
                     sender_email=user_email,
