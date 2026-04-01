@@ -115,6 +115,8 @@
             font-size: 15px;
             font-family: sans-serif;
             resize: none;
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
         .input-area button {
             padding: 12px 20px;
@@ -355,10 +357,10 @@
                 <button onclick="cancelReply()">x</button>
             </div>
             <div style="display:flex;gap:10px;width:100%;">
-                <textarea id="message-input" placeholder="Сообщение..." rows="1"
+                <textarea id="message-input" placeholder="Сообщение..."
                     onkeydown="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }"
                     oninput="onTyping(); autoResize()"
-                    style="resize: none; overflow-y: hidden;"></textarea>
+                    style="resize: none; overflow-y: hidden; white-space: pre-wrap;"></textarea>
             <input type="file" id="file-input" accepts="image/*" multiple style="display:none" onchange="uploadFiles(this.files)"/>
             <button onclick="document.getElementById('file-input').click()" style="padding:12px;background:#2a2a2a;border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:18px;">📎</button>
             <button onclick="sendMessage()">→</button>
