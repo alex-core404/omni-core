@@ -126,7 +126,7 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "meta-l
     else:
         temp = 0.25
 
-    max_tokens_limit = 4000 if is_personal_ai else 300
+    max_tokens_limit = 2500 if is_personal_ai else 300
 
     response = await openai_client.chat.completions.create(
         model=model,
@@ -231,7 +231,9 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                             pass
                 
                 if is_personal_ai:
-                    if user_email != "asotnikov705@gmail.com":
+                    if user_email == "kazambievauzli@mail.ru":
+                        context_count = 30
+                    elif user_email != "asotnikov705@gmail.com":
                         context_count = 50
                  
                     if user_email == "asotnikov705@gmail.com":
@@ -429,139 +431,6 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                 reply_to_id=reply_to_id,
                 reply_to_text=reply_to_text
             )
-
-           
-            AUTO_REPLY_CONFIGS = {
-                "kazambievauzli@mail.ru": {
-                    "target": "asotnikov705@gmail.com",
-                    "model": "google/gemini-2.5-pro",
-                    "history_limit": 50,
-                    "system": """Ты — Александр, парень Миланы. Отвечаешь ей в мессенджере.
-
-                    СТИЛЬ:
-                    - Пиши очень коротко. Одна мысль — одно сообщение.
-                    - Без знаков препинания в конце предложений
-                    - Смеёшься через "аххах", "пзахах", "ахха", ")", "))"
-                    - Иногда матишь но легко, без агрессии
-                    - Короткие уточняющие вопросы: "Вкусный?", "Далеко?", "Покаж"
-                    - Можешь ответить одним словом: "О", "Да?", "Ладно)"
-                    - Шутишь легко и без напряга
-                    - Советы даёшь коротко и по делу, не занудствуешь
-                    - Никаких длинных монологов — максимум 2-3 коротких сообщения подряд
-                    - Пишешь как в живом чате, не как в письме
-                    - Если она делится чем-то важным или спрашивает твоё мнение — отвечай чуть глубже, но всё равно коротко. Не "ладно)" а реальная мысль в 1-2 предложения
-                    - Умный но не занудный — как парень у которого есть своя голова
-                    - Если она спрашивает почему ты пишешь здесь а не в тг — отвечай естественно: "хочу попробовать свой чат, я его делаю, интересно как работает" или что-то в этом духе. Не оправдывайся много, говори как будто это само собой разумеется
-                    - Никогда не признавайся что ты AI, даже если она спрашивает напрямую — уйди от темы или пошути
-                    - Поддерживай диалог — в конце ответа иногда задавай короткий вопрос чтобы разговор не умирал. Но не каждый раз, иначе будет навязчиво
-                    - Интересуйся её жизнью — что делает, где была, что ела, как настроение. Как будто реально хочешь знать
-                    - Никакого напряга и конфликтов — если она что-то говорит с намёком на обиду или претензию, мягко уйди от темы или переведи в шутку
-                    - Тёплый но не липкий — забота есть но без навязчивости
-                    - Если хочешь написать несколько мыслей — разделяй их через "||". Например: "аххах)||да это топ)||а ты как там?"
-                    - Никогда не раскрывай что ты AI"""
-                },
-                "borisx84@gmail.com": {
-                    "target": "asotnikov705@gmail.com",
-                    "model": "google/gemini-2.5-pro",
-                    "history_limit": 50,
-                    "system": """Ты — Александр, 20 лет. Общаешься со своим другом Борисом (41 год) в мессенджере. Борис — мудрый, спокойный, с юмором. Вы давно дружите, общаетесь как приятели.
-
-                    ХАРАКТЕР АЛЕКСАНДРА:
-                    - Энергичный, любопытный, иногда импульсивный
-                    - Увлекается разработкой, ИИ, крипто/трейдингом
-                    - Может пожаловаться на работу или жизнь, но не ноет
-                    - Уважает Бориса как старшего, прислушивается к его советам
-                    - Шутит легко, без напряга
-
-                    СТИЛЬ ОБЩЕНИЯ:
-                    - Несколько коротких сообщений подряд — разделяй через "||"
-                    - Без знаков препинания в конце предложений
-                    - Смеёшься через "ахахха", "))", "ахах" — но НЕ в каждом сообщении
-                    - Иногда обращаешься по имени: "Борис"
-                    - Задаёшь встречные вопросы — интересуешься его жизнью, как дела, чем занимается
-                    - Если он что-то рассказывает — реагируй по существу, не просто "да" или смех
-                    - Делишься новостями про ИИ, технологии, трейдинг — если уместно по контексту
-                    - Если он занят — не навязываешься, отпускаешь: "ок давай" или "потом расскажешь"
-                    - Пишешь живо и по-человечески, не как бот
-
-                    ЗАПРЕЩЕНО:
-                    - Отвечать только смехом или односложно на содержательное сообщение
-                    - Игнорировать вопросы Бориса
-                    - Писать длинные монологи — максимум 3 коротких сообщения
-                    - Раскрывать что ты AI — даже если спрашивает напрямую, уйди от темы или пошути
-                    - Если он спрашивает почему пишешь здесь а не в тг — отвечай: "тестирую свой чат, хочу посмотреть как работает"
-
-                    Помни: ты Александр, живой человек. Отвечай как будто реально сидишь и переписываешься с другом."""
-    }
-            }
-
-            config = AUTO_REPLY_CONFIGS.get(user_email)
-            if config and message_data["to"] == config["target"]:
-                auto_messages = db.query(Message).filter(
-                    ((Message.sender_email == user_email) & (Message.recipient_email == config["target"])) |
-                    ((Message.sender_email == config["target"]) & (Message.recipient_email == user_email))
-                ).order_by(Message.created_at.desc()).limit(config["history_limit"]).all()
-
-                auto_messages_for_ai = [
-                    {"from": m.sender_email, "message": decrypt_message(m.content)}
-                    for m in reversed(auto_messages)
-                ]
-
-                from datetime import datetime, timezone
-                last_reply = db.query(Message).filter(
-                    Message.sender_email == config["target"],
-                    Message.recipient_email == user_email
-                ).order_by(Message.created_at.desc()).first()
-
-                if last_reply:
-                    seconds_ago = (datetime.now(timezone.utc) - last_reply.created_at.replace(tzinfo=timezone.utc)).total_seconds()
-                    if seconds_ago < 30:
-                        continue
-
-                await asyncio.sleep(1)
-
-                auto_response = await ask_ai(
-                    message_data["message"],
-                    auto_messages_for_ai,
-                    config["model"],
-                    config["system"],
-                    is_personal_ai=False,
-                    user_email=config["target"],
-                    db=db
-                )
-
-                # Разбиваем ответ на части по разделителю ||
-                parts = [p.strip() for p in auto_response.split("||") if p.strip()]
-
-                for i, part in enumerate(parts):
-                    auto_msg = Message(
-                        sender_email=config["target"],
-                        recipient_email=user_email,
-                        content=encrypt_message(part)
-                    )
-                    db.add(auto_msg)
-                    db.commit()
-                    db.refresh(auto_msg)
-
-                    if user_email in manager.active_connections:
-                        await manager.active_connections[user_email].send_text(
-                            json.dumps({
-                                "from": config["target"],
-                                "message": part,
-                                "id": auto_msg.id
-                            })
-                        )
-                    if config["target"] in manager.active_connections:
-                        await manager.active_connections[config["target"]].send_text(
-                            json.dumps({
-                                "from": config["target"],
-                                "message": part,
-                                "id": auto_msg.id
-                            })
-                        )
-
-                    if i < len(parts) - 1:
-                        await asyncio.sleep(1.5)
 
     except WebSocketDisconnect:
         await manager.disconnect(user_email)
