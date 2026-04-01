@@ -105,6 +105,17 @@
             color: #fff;
             font-size: 15px;
         }
+        .input-area textarea {
+            flex: 1;
+            padding: 12px;
+            background: #2a2a2a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 15px;
+            font-family: sans-serif;
+            resize: none;
+        }
         .input-area button {
             padding: 12px 20px;
             background: #6c63ff;
@@ -344,9 +355,10 @@
                 <button onclick="cancelReply()">x</button>
             </div>
             <div style="display:flex;gap:10px;width:100%;">
-                <input id="message-input" placeholder="Сообщение..." 
-                    onkeydown="if(event.key==='Enter') sendMessage()"
-                    oninput="onTyping()" />
+                <textarea id="message-input" placeholder="Сообщение..." rows="1"
+                    onkeydown="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }"
+                    oninput="onTyping(); autoResize()"
+                    style="resize: none; overflow-y: hidden;"></textarea>
             <input type="file" id="file-input" accepts="image/*" multiple style="display:none" onchange="uploadFiles(this.files)"/>
             <button onclick="document.getElementById('file-input').click()" style="padding:12px;background:#2a2a2a;border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:18px;">📎</button>
             <button onclick="sendMessage()">→</button>
@@ -855,6 +867,11 @@
             document.getElementById("reply-preview").style.display = "none";
             document.getElementById("reply-preview-text").innerText = "";
         }
+        function autoResize() {
+            const textarea = document.getElementById("message-input");
+            textarea.style.height = "auto";
+            textarea.style.height = Math.min(textarea.scrollHeight, 150) + "px";
+        }
 
         let reactionPickerEl = null;
 
@@ -942,14 +959,12 @@
             }));
             if (text.startsWith("@ai") || currentContact === "ai-bot@omni") {
                 showAiTypingIndicator();
-            setTimeout(() => {
-                hideAiTypingIndicator();
-            }, 15000); 
             }
             if (!text.startsWith("@ai") && currentContact !== "ai-bot@omni") {
                 addMessage(text, "out", null, null, false, replyToId, replyToText);
             }
             input.value = "";
+            autoResize(); 
             cancelReply();
         }
 
