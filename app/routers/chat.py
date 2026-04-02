@@ -378,7 +378,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                     filtered_messages = []
                     for m in reversed(all_messages):
                         msg_tokens = count_tokens(decrypt_message(m.content))
-                        if total_tokens + msg_tokens > 3000:
+                        if total_tokens + msg_tokens > 4500:
                             break
                         filtered_messages.append({"from": m.sender_email, "message": decrypt_message(m.content)})
                         total_tokens += msg_tokens
