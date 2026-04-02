@@ -368,7 +368,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                     messages_for_ai = db.query(Message).filter(
                         ((Message.sender_email == user_email) & (Message.recipient_email == message_data["to"])) |
                         ((Message.sender_email == message_data["to"]) & (Message.recipient_email == user_email))
-                    ).order_by(Message.created_at.desc()).limit(50).all()
+                    ).order_by(Message.created_at.desc()).limit(context_count).all()
 
                     messages_for_ai = [
                         {"from": m.sender_email, "message": decrypt_message(m.content)} 
