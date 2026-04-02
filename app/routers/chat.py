@@ -366,15 +366,21 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
 
                     messages_for_ai = filtered_messages
                 else:
-                    messages_for_ai = db.query(Message).filter(
+                    all_messages = db.query(Message).filter(
                         ((Message.sender_email == user_email) & (Message.recipient_email == message_data["to"])) |
                         ((Message.sender_email == message_data["to"]) & (Message.recipient_email == user_email))
-                    ).order_by(Message.created_at.desc()).limit(context_count).all()
+                    ).order_by(Message.created_at.desc()).all()
 
-                    messages_for_ai = [
-                        {"from": m.sender_email, "message": decrypt_message(m.content)} 
-                        for m in reversed(messages_for_ai)
-                    ]
+                    total_tokens = 0
+                    filtered_messages = []
+                    for m in reversed(all_messages):
+                        msg_tokens = count_tokens(decrypt_message(m.content))
+                        if total_tokens + msg_tokens > 3000:
+                            break
+                        filtered_messages.append({"from": m.sender_email, "message": decrypt_message(m.content)})
+                        total_tokens += msg_tokens
+
+                    messages_for_ai = filtered_messages
 
                 ai_response = await ask_ai(text, messages_for_ai, model, system, is_personal_ai=is_personal_ai, user_email=user_email, db=db)
 
