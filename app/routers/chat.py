@@ -376,14 +376,14 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
 
                     total_tokens = 0
                     filtered_messages = []
-                    for m in reversed(all_messages):
+                    for m in all_messages:  # от новых к старым
                         msg_tokens = count_tokens(decrypt_message(m.content))
                         if total_tokens + msg_tokens > 4500:
                             break
                         filtered_messages.append({"from": m.sender_email, "message": decrypt_message(m.content)})
                         total_tokens += msg_tokens
 
-                    messages_for_ai = filtered_messages
+                    messages_for_ai = list(reversed(filtered_messages))  # обратно в хронологический порядок
 
                 ai_response = await ask_ai(text, messages_for_ai, model, system, is_personal_ai=is_personal_ai, user_email=user_email, db=db)
 
