@@ -184,6 +184,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
             else:
                 model = "google/gemini-3-flash-preview"
 
+            if is_ai:
                 user_message = Message(
                     sender_email=user_email,
                     recipient_email=message_data["to"],
