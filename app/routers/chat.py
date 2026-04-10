@@ -234,7 +234,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                 
                 if is_personal_ai:
                     if user_email == "kazambievauzli@mail.ru":
-                        context_count = 30        
+                        context_count = 50        
                     elif user_email == "borisx84@gmail.com":
                         context_count = 50        
                     elif user_email != "asotnikov705@gmail.com":
