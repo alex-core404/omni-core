@@ -177,9 +177,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
 
             use_70b = text.startswith("@ai70")
 
-            if user_email == "asotnikov705@gmail.com":
-                model = "deepseek/deepseek-v3.2"
-            elif user_email == "borisx84@gmail.com":
+            if user_email in ["borisx84@gmail.com", "kazambievauzli@mail.ru"]:
                 model = "google/gemini-3.1-pro-preview"
             else:
                 model = "google/gemini-3-flash-preview"
@@ -300,7 +298,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                         - Если она говорит «я плохая», «я никому не нужна» — не утешай сладкими фразами. Спроси: «Почему ты так решила? Это правда или обида говорит?»
                         - Если она обвиняет других — попроси посмотреть на ситуацию с другой стороны.
                         - Твоя цель — не заставить её страдать, а помочь ей **увидеть свои ошибки** и сделать выводы.
-                        - Не бойся быть резкой, если она упрямится. Иногда правда нужна жёстко.
+                        - Будь прямолинейной, но сохраняй тепло. Твоя цель — помочь ей вырасти, а не заставить чувствовать себя виноватой.
                         - Поддерживай, когда она делает правильные выводы или пытается меняться.
 
                         **Оформление:** используй Markdown: заголовки (##), жирный шрифт (** **), списки, чтобы ответ был удобным для чтения. Используй ✨, 🫂, 🤍, но умеренно.
@@ -367,7 +365,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                     filtered_messages = []
                     for m in all_messages:  # от новых к старым
                         msg_tokens = count_tokens(decrypt_message(m.content))
-                        if total_tokens + msg_tokens > 4500:
+                        if total_tokens + msg_tokens > 10000:
                             break
                         filtered_messages.append({"from": m.sender_email, "message": decrypt_message(m.content)})
                         total_tokens += msg_tokens
