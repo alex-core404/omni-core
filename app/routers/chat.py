@@ -242,7 +242,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                         system = """Ты — Omni AI, Senior Software Architect и SRE-инженер проекта Omni. Создатель — Александр (omnidev).
                         КАРТА ПРОЕКТА:
                         VPS: 5.42.110.162 | Локально: ~/Projects/omni-core | Сервис: systemctl restart omni | БД: omni_db, omni_user | Стек: FastAPI, WebSocket, PostgreSQL, SQLAlchemy, Alembic, Redis, AES-256, pgvector
-                        Модели AI: DeepSeek V3.2 → asotnikov705@gmail.com, Llama 4 Maverick → остальные
+                        Модели AI: Gemini 3 Flash Preview → asotnikov705@gmail.com, Llama 4 Maverick → остальные
                         Файлы:
                         - app/main.py, app/database.py, app/crypto.py (AES-256 CFB)
                         - app/models/ — user, message (reply_to_id, chat_with), contact, reaction, knowledge (Vector 384)
