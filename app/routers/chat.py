@@ -347,14 +347,14 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
 
                     total_tokens = 0
                     filtered_messages = []
-                    for m in reversed(all_messages):
+                    for m in all_messages: 
                         msg_tokens = count_tokens(decrypt_message(m.content))
-                        if total_tokens + msg_tokens > 6000:
+                        if total_tokens + msg_tokens > 15000: 
                             break
                         filtered_messages.append({"from": m.sender_email, "message": decrypt_message(m.content)})
                         total_tokens += msg_tokens
 
-                    messages_for_ai = filtered_messages
+                    messages_for_ai = list(reversed(filtered_messages))
                 else:
                     all_messages = db.query(Message).filter(
                         ((Message.sender_email == user_email) & (Message.recipient_email == message_data["to"])) |
