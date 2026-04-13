@@ -177,7 +177,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
 
             use_70b = text.startswith("@ai70")
 
-            if user_email in ["borisx84@gmail.com", "kazambievauzli@mail.ru"]:
+            if user_email == "borisx84@gmail.com":
                 model = "google/gemini-3.1-pro-preview"
             else:
                 model = "google/gemini-3-flash-preview"
@@ -381,7 +381,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                     filtered_messages = []
                     for m in all_messages:  # от новых к старым
                         msg_tokens = count_tokens(decrypt_message(m.content))
-                        if total_tokens + msg_tokens > 10000:
+                        if total_tokens + msg_tokens > 40000:
                             break
                         filtered_messages.append({"from": m.sender_email, "message": decrypt_message(m.content)})
                         total_tokens += msg_tokens
