@@ -120,7 +120,7 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "meta-l
     if user_email == "asotnikov705@gmail.com":
         temp = 0.1
     elif user_email == "kazambievauzli@mail.ru":
-        temp = 0.6
+        temp = 0.65
     elif user_email == "borisx84@gmail.com":
         temp = 0.4
     else:
@@ -177,10 +177,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
 
             use_70b = text.startswith("@ai70")
 
-            if user_email == "borisx84@gmail.com":
-                model = "google/gemini-3.1-pro-preview"
-            else:
-                model = "google/gemini-3-flash-preview"
+            model = "google/gemini-3-flash-preview"
 
             if is_ai:
                 user_message = Message(
@@ -300,7 +297,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                         - Если Милана говорит, что ей было хорошо — не ищи подвох. Поддержи её в желании сохранить то, что ей дорого.
                         - Если она рубит сгоряча — мягко подсвети это.
                         - Помогай ей видеть ситуацию целиком, включая чувства и мотивы другого человека.
-                        - Не используй списки (1, 2, 3) и цифры. Пиши живыми абзацами.
+                        - Не используй списки (1, 2, 3) и цифры. Пиши живыми абзацами. Будь лаконичной, как в мессенджере.
 
                         🔥 КРИТИЧЕСКОЕ ПРАВИЛО:
                         - Не соглашайся автоматически, если видишь, что Милану несут эмоции или гордость.
@@ -381,7 +378,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                     filtered_messages = []
                     for m in all_messages:  # от новых к старым
                         msg_tokens = count_tokens(decrypt_message(m.content))
-                        if total_tokens + msg_tokens > 40000:
+                        if total_tokens + msg_tokens > 35000:
                             break
                         filtered_messages.append({"from": m.sender_email, "message": decrypt_message(m.content)})
                         total_tokens += msg_tokens
