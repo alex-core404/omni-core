@@ -10,7 +10,7 @@ from openai import AsyncOpenAI
 from app.models.knowledge import Knowledge
 from app.utils.embeddings import get_embedding
 from sqlalchemy import select
-from datetime import datetime
+from datetime import datetime, timezone
 import pytz
 import os
 import re
@@ -176,9 +176,12 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
 
             if message_data.get("type") == "set_timezone":
                 new_tz = message_data.get("timezone", "UTC")
-                user.timezone = new_tz  
-                db.commit()             
-                print(f"DEBUG: Timezone for {user_email} updated to {new_tz}")
+                from app.models.user import User
+                user = db.query(User).filter(User.email == user_email).first()
+                if user:
+                    user.timezone = new_tz
+                    db.commit()
+                    print(f"✅ Timezone for {user_email} updated to {new_tz}")
                 continue 
             
             if message_data.get("type") == "typing":
