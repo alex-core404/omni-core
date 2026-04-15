@@ -82,7 +82,7 @@ async def get_context_from_db(query: str, db: Session):
 async def ask_ai(user_message: str, context_messages: list, model: str = "meta-llama/llama-4-maverick", system_prompt: str = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально. Только на русском языке.", is_personal_ai: bool = False, user_email: str = None, db: Session = None) -> str:
     print(f"🔵 ask_ai вызвана для {user_email}, db={db is not None}")
 
-    time_info = "Europe/Moscow" 
+    time_info = datetime.now().strftime("%H:%M (UTC)") 
     if db and user_email:
         user_obj = db.query(User).filter(User.email == user_email).first()
         user_tz_str = user_obj.timezone if (user_obj and user_obj.timezone) else "Europe/Moscow"
@@ -92,8 +92,6 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "meta-l
         except:
             time_info = datetime.now().strftime("%H:%M (UTC)")
             
-        local_now = datetime.now(tz)
-        time_info = local_now.strftime("%A, %d %B %Y, %H:%M")
 
     
     db_context = ""
