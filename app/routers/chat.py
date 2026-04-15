@@ -11,6 +11,7 @@ from app.models.knowledge import Knowledge
 from app.utils.embeddings import get_embedding
 from sqlalchemy import select
 from datetime import datetime, timezone
+import pytz
 import os
 import re
 import asyncio
@@ -79,6 +80,21 @@ async def get_context_from_db(query: str, db: Session):
         return ""
 async def ask_ai(user_message: str, context_messages: list, model: str = "meta-llama/llama-4-maverick", system_prompt: str = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально. Только на русском языке.", is_personal_ai: bool = False, user_email: str = None, db: Session = None) -> str:
     print(f"🔵 ask_ai вызвана для {user_email}, db={db is not None}")
+
+    time_info = ""
+    if db and user_email:
+        from app.models.user import User # Импорт модели юзера
+        user_obj = db.query(User).filter(User.email == user_email).first()
+        user_tz_str = user_obj.timezone if user_obj and user_obj.timezone else "UTC"
+        
+        try:
+            tz = pytz.timezone(user_tz_str)
+        except:
+            tz = pytz.UTC
+            
+        local_now = datetime.now(tz)
+        time_info = local_now.strftime("%A, %d %B %Y, %H:%M")
+
     
     db_context = ""
     if user_email == "asotnikov705@gmail.com" and db:
@@ -91,7 +107,7 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "meta-l
         else:
             print("⏭️ RAG пропущен")
     
-    final_system_prompt = system_prompt
+    final_system_prompt = f"Текущее время пользователя: {time_info}\n\n{system_prompt}"
     if db_context:
         final_system_prompt += f"\n\nИспользуй этот КОНТЕКСТ ИЗ ТВОИХ ФАЙЛОВ для ответа:\n{db_context}"
  
@@ -157,6 +173,13 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
         while True:
             data = await websocket.receive_text()
             message_data = json.loads(data)
+
+            if message_data.get("type") == "set_timezone":
+                new_tz = message_data.get("timezone", "UTC")
+                user.timezone = new_tz  
+                db.commit()             
+                print(f"DEBUG: Timezone for {user_email} updated to {new_tz}")
+                continue 
             
             if message_data.get("type") == "typing":
                 if message_data["to"] in manager.active_connections:
@@ -378,14 +401,14 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
 
                     total_tokens = 0
                     filtered_messages = []
-                    for m in all_messages:  # от новых к старым
+                    for m in all_messages:  
                         msg_tokens = count_tokens(decrypt_message(m.content))
                         if total_tokens + msg_tokens > 35000:
                             break
                         filtered_messages.append({"from": m.sender_email, "message": decrypt_message(m.content)})
                         total_tokens += msg_tokens
 
-                    messages_for_ai = list(reversed(filtered_messages))  # обратно в хронологический порядок
+                    messages_for_ai = list(reversed(filtered_messages))  
 
                 ai_response = await ask_ai(text, messages_for_ai, model, system, is_personal_ai=is_personal_ai, user_email=user_email, db=db)
 

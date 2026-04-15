@@ -645,6 +645,14 @@
 
         function connectWS() {
             ws = new WebSocket(`ws://5.42.110.162:8000/ws/${email}`);
+            ws.onopen = function(e) {
+                console.log("Connected to WebSocket");
+                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                ws.send(JSON.stringify({
+                    type: "set_timezone",
+                    timezone: tz
+                }));
+            };
             ws.onmessage = async function(event) {
                 const data = JSON.parse(event.data);
                 updateUnreadCount();
