@@ -10,4 +10,4 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     username = Column(String, unique=True, index=True, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-
+    timezone = Column(String, default="UTC")
