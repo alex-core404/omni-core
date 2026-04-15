@@ -6,6 +6,7 @@ import redis.asyncio as aioredis
 import json
 from app.database import get_db, SessionLocal
 from app.models.message import Message
+from app.models.user import User
 from openai import AsyncOpenAI
 from app.models.knowledge import Knowledge
 from app.utils.embeddings import get_embedding
