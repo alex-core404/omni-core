@@ -10,7 +10,7 @@ from openai import AsyncOpenAI
 from app.models.knowledge import Knowledge
 from app.utils.embeddings import get_embedding
 from sqlalchemy import select
-from datetime import datetime
+from datetime import datetime, timezone
 import pytz
 import os
 import re
