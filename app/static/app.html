@@ -377,7 +377,7 @@
                 return hljs.highlightAuto(code).value;
             }
         });
-        const API = "http://5.42.110.162:8000";
+        const API = "http://147.45.212.180:8000";
         const email = localStorage.getItem("email");
         const token = localStorage.getItem("token");
 
@@ -644,7 +644,7 @@
 
 
         function connectWS() {
-            ws = new WebSocket(`ws://5.42.110.162:8000/ws/${email}`);
+            ws = new WebSocket(`ws://147.45.212.180:8000/ws/${email}`);
             ws.onopen = function(e) {
                 console.log("Connected to WebSocket");
                 const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
