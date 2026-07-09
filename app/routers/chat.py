@@ -200,7 +200,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
 
             use_70b = text.startswith("@ai70")
 
-            model = "google/gemini-3-flash-preview"
+            model = "google/gemini-3.5-flash"
 
             if is_ai:
                 user_message = Message(
