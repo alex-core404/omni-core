@@ -1,8 +1,7 @@
 # 🤖 Omni — Encrypted AI Messenger
 
-Real-time messenger with AI assistant and end-to-end message encryption.
+Real-time messenger with AI assistant and AES-256 message encryption.
 
-![Omni Chat](screenshots/chat.png)
 
 ## ✨ Features
 
