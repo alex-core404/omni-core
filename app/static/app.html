@@ -126,10 +126,10 @@
             color: #fff;
             cursor: pointer;
         }
-        .logout { 
-            background: none; 
-            border: none; 
-            color: #888; 
+        .logout {
+            background: none;
+            border: none;
+            color: #888;
             cursor: pointer;
             font-size: 13px;
         }
@@ -320,13 +320,13 @@
                 0%, 100% { opacity: 0.2; }
                 50% { opacity: 1; }
             }
-         
+
     </style>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
-<body> 
+<body>
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
     <img id="lightbox-img" src="">
 </div>
@@ -394,7 +394,7 @@
                 }
             });
         }
-        
+
 
         let ws;
         let currentContact = null;
@@ -485,12 +485,12 @@
                 badge.id = `badge-${c.email.replace('@','_').replace(/\./g,'_')}`;
                 badge.style.cssText = "background:#ff4444;color:#fff;border-radius:10px;padding:2px 7px;font-size:11px;display:none;margin-right:6px;";
 
-            
+
                 const del = document.createElement("button");
                 del.innerText = "✕";
                 del.style.cssText = "background:none;border:none;color:#888;cursor:pointer;font-size:12px;";
                 del.onclick = (e) => { e.stopPropagation(); deleteContact(c.email); };
-                
+
                 el.appendChild(dot);
                 el.appendChild(name);
                 el.appendChild(badge);
@@ -516,8 +516,8 @@
                     badge.style.display = "none";
                 }
             });
-        }    
-        
+        }
+
 
         async function updateOnlineStatus() {
             for (const c of contacts) {
@@ -605,7 +605,7 @@
             if (ws) {
                 ws.send(JSON.stringify({type: "read", to: contact}));
             }
-            
+
         }
 
         async function loadHistory(contact) {
@@ -647,11 +647,7 @@
             ws = new WebSocket(`ws://147.45.212.180:8000/ws/${email}`);
             ws.onopen = function(e) {
                 console.log("Connected to WebSocket");
-                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                ws.send(JSON.stringify({
-                    type: "set_timezone",
-                    timezone: tz
-                }));
+
             };
             ws.onmessage = async function(event) {
                 const data = JSON.parse(event.data);
@@ -688,7 +684,7 @@
                         ws.send(JSON.stringify({type: "read", to: currentContact}));
                     }
                 }
-            
+
             };
             ws.onclose = () => setTimeout(connectWS, 3000);
         }
@@ -700,7 +696,7 @@
         function closeLightbox() {
             document.getElementById("lightbox").classList.remove("open");
         }
-        
+
 
         function addMessage(text, type, time = null, msgId = null, isRead = false, replyId = null, replyText = null, isAi = false) {
             const div = document.getElementById("messages");
@@ -748,10 +744,10 @@
                     hljs.highlightElement(block);
                 });
             }
-            
+
             const meta = document.createElement("div");
             meta.style.cssText = `font-size:11px;margin-top:4px;display:flex;align-items:center;justify-content:${type === 'out' ? 'flex-end' : 'flex-start'};gap:4px;`;
-            
+
             if (time) {
                 const timeEl = document.createElement("span");
                 timeEl.style.color = type === 'out' ? '#ccc' : '#888';
@@ -768,7 +764,7 @@
                 meta.appendChild(tick);
             }
 
-            
+
             const reactionsBar = document.createElement("div");
             reactionsBar.className = "reactions-bar";
             if (msgId) {
@@ -785,7 +781,7 @@
             }
             div.scrollTop = div.scrollHeight;
 
-            
+
             if (msgId) {
                 let pressTimer;
                 msg.addEventListener("mousedown", () => {
@@ -793,7 +789,7 @@
                 });
                 msg.addEventListener("mouseup", () => clearTimeout(pressTimer));
                 msg.addEventListener("mouseleave", () => clearTimeout(pressTimer));
-               
+
                 msg.addEventListener("touchstart", () => {
                     pressTimer = setTimeout(() => showReactionPicker(msgId, msg), 500);
                 });
@@ -826,12 +822,12 @@
                     }, i * 100);
                 }
             }
-        } 
+        }
         let aiTypingElement = null;
 
         function showAiTypingIndicator() {
-            if (aiTypingElement) return; 
-            
+            if (aiTypingElement) return;
+
             const messagesDiv = document.getElementById("messages");
             const typingMsg = document.createElement("div");
             typingMsg.className = "message in ai-typing";
@@ -858,7 +854,7 @@
                 aiTypingElement = null;
             }
         }
-        
+
         let typingTimeout = null;
 
         let replyToId = null;
@@ -939,7 +935,7 @@
             if (!currentContact || !ws) return;
             ws.send(JSON.stringify({type: "typing", to: currentContact}));
         }
-        
+
         async function uploadFiles(files) {
             if (!currentContact) return;
             for (const file of files) {
@@ -964,7 +960,7 @@
             const text = input.value.trim();
             if (!text || !currentContact || !ws) return;
             ws.send(JSON.stringify({
-                to: currentContact, 
+                to: currentContact,
                 message: text,
                 reply_to_id: replyToId
             }));
@@ -975,7 +971,7 @@
                 addMessage(text, "out", null, null, false, replyToId, replyToText);
             }
             input.value = "";
-            autoResize(); 
+            autoResize();
             cancelReply();
         }
 
@@ -985,7 +981,7 @@
             window.location.href = "/static/index.html";
         }
 
-        
+
         loadContacts();
         updateOnlineStatus();
         updateUnread();

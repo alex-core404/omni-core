@@ -2,7 +2,7 @@
 
 services:
   db:
-    image: pgvector/pgvector:pg15
+    image: postgres:15
     environment:
       POSTGRES_USER: omni_user
       POSTGRES_PASSWORD: omni_password

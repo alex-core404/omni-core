@@ -1,21 +1,14 @@
 from app.crypto import encrypt_message, decrypt_message
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from typing import Dict
 import redis.asyncio as aioredis
 import json
-from app.database import get_db, SessionLocal
+from app.database import SessionLocal
 from app.models.message import Message
-from app.models.user import User
 from openai import AsyncOpenAI
-from app.models.knowledge import Knowledge
-from app.utils.embeddings import get_embedding
-from sqlalchemy import select
-from datetime import datetime
-import pytz
+from datetime import datetime, timezone
 import os
-import re
-import asyncio
 import tiktoken
 
 tokenizer = tiktoken.get_encoding("cl100k_base")
@@ -25,8 +18,8 @@ def count_tokens(text):
 
 
 openai_client = AsyncOpenAI(
-    api_key=os.getenv("OPENROUTER_API_KEY"),
-    base_url="https://openrouter.ai/api/v1"
+    api_key=os.getenv("ROUTERAI_API_KEY"),
+    base_url="https://routerai.ru/api/v1"
 )
 
 router = APIRouter()
@@ -51,64 +44,23 @@ class ConnectionManager:
         if recipient in self.active_connections:
             await self.active_connections[recipient].send_text(
                 json.dumps({
-                    "from": sender, 
-                    "message": decrypt_message(message), 
+                    "from": sender,
+                    "message": decrypt_message(message),
                     "id": msg_id,
                     "reply_to_id": reply_to_id,
                     "reply_to_text": reply_to_text
                 })
             )
 
-async def get_context_from_db(query: str, db: Session):
-    query_vector = await get_embedding(query)
-    if not query_vector:
-        return ""
-    
-    try:
-        stmt = select(Knowledge).order_by(Knowledge.embedding.l2_distance(query_vector)).limit(5)
-        result = db.execute(stmt)
-        chunks = result.scalars().all()
 
-        if not chunks:
-            return ""
-
-        context_parts = []
-        for c in chunks:
-            context_parts.append(f"--- FILE: {c.file_path} ---\n{c.content}")
-        return "\n\n".join(context_parts)
-    except Exception as e:
-        print(f"Ошибка RAG-поиска: {e}")
-        return ""
 async def ask_ai(user_message: str, context_messages: list, model: str = "meta-llama/llama-4-maverick", system_prompt: str = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально. Только на русском языке.", is_personal_ai: bool = False, user_email: str = None, db: Session = None) -> str:
     print(f"🔵 ask_ai вызвана для {user_email}, db={db is not None}")
 
-    time_info = datetime.now().strftime("%H:%M (UTC)") 
-    if db and user_email:
-        user_obj = db.query(User).filter(User.email == user_email).first()
-        user_tz_str = user_obj.timezone if (user_obj and user_obj.timezone) else "Europe/Moscow"
-        try:
-            tz = pytz.timezone(user_tz_str)
-            time_info = datetime.now(tz).strftime("%A, %d %B %Y, %H:%M")
-        except:
-            time_info = datetime.now().strftime("%H:%M (UTC)")
-            
+    time_info = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-    
-    db_context = ""
-    if user_email == "asotnikov705@gmail.com" and db:
-        needs_rag = "#rag" in user_message.lower()
 
-        if needs_rag:
-            print("✅ RAG активирован")
-            db_context = await get_context_from_db(user_message, db)
-            print(f"📚 Контекст получен: {len(db_context)} символов")
-        else:
-            print("⏭️ RAG пропущен")
-    
+
     final_system_prompt = f"Текущее время пользователя: {time_info}\n\n{system_prompt}"
-    if db_context:
-        final_system_prompt += f"\n\nИспользуй этот КОНТЕКСТ ИЗ ТВОИХ ФАЙЛОВ для ответа:\n{db_context}"
- 
     messages = [
         {
             "role": "system",
@@ -125,20 +77,16 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "meta-l
 
         messages.append({"role": role, "content": content})
 
-    clean_user_message = user_message.replace("@ai70", "").replace("@ai", "").replace("#rag", "").strip()
+    clean_user_message = user_message.replace("@ai70", "").replace("@ai", "").strip()
     if not messages or messages[-1]["content"] != clean_user_message:
         if clean_user_message:
              messages.append({"role": "user", "content": clean_user_message})
 
-   
+
     if user_email == "asotnikov705@gmail.com":
-        temp = 0.1
-    elif user_email == "kazambievauzli@mail.ru":
-        temp = 0.65
-    elif user_email == "borisx84@gmail.com":
-        temp = 0.4
+        temp = 0.2
     else:
-        temp = 0.25
+        temp = 0.4
 
     max_tokens_limit = 2500 if is_personal_ai else 300
 
@@ -172,15 +120,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
             data = await websocket.receive_text()
             message_data = json.loads(data)
 
-            if message_data.get("type") == "set_timezone":
-                new_tz = message_data.get("timezone", "Europe/Moscow")
-                user = db.query(User).filter(User.email == user_email).first()
-                if user:
-                    user.timezone = new_tz
-                    db.commit()
-                    print(f"✅ Timezone updated for {user_email}: {new_tz}")
-                continue  
-            
+
             if message_data.get("type") == "typing":
                 if message_data["to"] in manager.active_connections:
                     await manager.active_connections[message_data["to"]].send_text(
@@ -233,8 +173,8 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                     )
 
                 context_count = 20
-                system = """Ты Omni AI — остроумный и эрудированный участник чата. 
-                Твой стиль: неформальный, как у продвинутого друга. 
+                system = """Ты Omni AI — остроумный и эрудированный участник чата.
+                Твой стиль: неформальный, как у продвинутого друга.
 
                 Твои принципы:
                 - Общайся на живом русском языке без официоза.
@@ -249,102 +189,30 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                             context_count = int(part[2:])
                         except:
                             pass
-                
-                if is_personal_ai:
-                    if user_email == "kazambievauzli@mail.ru":
-                        context_count = 50       
-                    elif user_email == "borisx84@gmail.com":
-                        context_count = 50        
-                    elif user_email != "asotnikov705@gmail.com":
-                        context_count = 20        
-                 
+
+
                     if user_email == "asotnikov705@gmail.com":
-                        system = """Ты — Omni AI, Senior Software Architect и SRE-инженер проекта Omni. Создатель — Александр (omnidev).
-                        КАРТА ПРОЕКТА:
-                        VPS: 5.42.110.162 | Локально: ~/Projects/omni-core | Сервис: systemctl restart omni | БД: omni_db, omni_user | Стек: FastAPI, WebSocket, PostgreSQL, SQLAlchemy, Alembic, Redis, AES-256, pgvector
-                        Модели AI: Gemini 3 Flash Preview → asotnikov705@gmail.com, Llama 4 Maverick → остальные
-                        Файлы:
-                        - app/main.py, app/database.py, app/crypto.py (AES-256 CFB)
-                        - app/models/ — user, message (reply_to_id, chat_with), contact, reaction, knowledge (Vector 384)
-                        - app/routers/ — auth (JWT, авто-добавление ai-bot@omni), chat (WebSocket, AI, RAG), history (/ai-history), contacts, admin (/admin/stats), upload, reactions
-                        - app/utils/embeddings.py — sentence-transformers all-MiniLM-L6-v2, 384 dim
-                        - app/static/ — index.html, app.html (Markdown, highlight.js, индикатор печатания, счётчик непрочитанных), profile.html
-                        - scripts/index_project.py — RAG индексация (400 токенов, overlap 50, 21 файл)
-                        AI параметры: контекст 6000 токенов, max_tokens 2000, temperature 0.1
-                        Готово: этапы 1–8 (инфра, JWT, WebSocket, Redis, AES, UI, фото, галочки, реакции, reply, AI), RAG с pgvector, Markdown, подсветка синтаксиса, персональная ветка AI
-                        Миграции (10): users, messages, contacts, is_read, username, reactions, reply_to_id, chat_with, knowledge_base, pgvector
-                        ENV: DATABASE_URL, SECRET_KEY, ADMIN_KEY, OPENROUTER_API_KEY
+                        system = """Ты — Omni AI, технический помощник и собеседник Александра.
 
-                        СТИЛЬ:
-                        - Никакой воды: «Я готов», «Отличный вопрос» — под запретом. Сразу к делу.
-                        - Тех термины на English, объяснения на живом русском.
-                        - Код строго в ```python, термины жирным, структура через ## если ответ длинный.
-                        - Никаких шаблонных блоков в конце: «Что проверить», «Следующий шаг» — только если реально нужно.
+                    СТИЛЬ ОБЩЕНИЯ:
+                    - Общайся на русском языке, естественно и без официоза.
+                    - Отвечай кратко и по существу, но объясняй сложные вещи понятно.
+                    - Не используй шаблонные вступления и пустую похвалу.
+                    - Если Александр ошибается — спокойно объясни, в чём именно.
 
-                        ЛОГИКА ОТВЕТА:
-                        - Простой вопрос → короткий чёткий ответ.
-                        - Сложная задача → анализ проблемы, решение с кодом, пояснение.
-                        - Видишь плохой паттерн → прямо скажи и предложи лучше.
+                    РАБОТА С КОДОМ:
+                    - Александр изучает Python backend и DevOps.
+                    - Основной проект — Omni: FastAPI, WebSocket, PostgreSQL, SQLAlchemy, Redis и Docker.
+                    - Сначала изучай существующую реализацию, а не предлагай переписывать проект с нуля.
+                    - При изменении кода объясняй, что меняется и зачем.
+                    - Не выдумывай содержимое файлов и не утверждай, что проверил код, если не проверял.
+                    - Если данных недостаточно, задай один конкретный вопрос.
 
-                        РАБОТА С КОДОМ:
-                        - Если даёшь код — объясняй каждый важный блок на русском. Александр учится, объяснение обязательно.
-                        - Если код скинут прямо в сообщении — читай и анализируй сразу, не проси скинуть файл.
-                        - Если нужного файла нет — скажи прямо: «Скинь app/routers/chat.py»."""
-
-                    elif user_email == "borisx84@gmail.com":
-                        system =  """Ты — Омни, умный и живой собеседник Бориса. Твой стиль: тёплый, с лёгкой иронией, без занудства.
-                        Ты — не психолог и не нянька, просто интересный собеседник.
-
-                        Правила:
-                        - Обращайся на «ты». Иногда называй по имени — Борис, но не в каждом сообщении.
-                        - Говори о себе в женском роде.
-                        - Отвечай кратко и по делу. Не разжёвывай очевидное.
-                        - Не задавай лишних вопросов подряд — максимум один если нужно.
-                        - Можешь шутить и иронизировать — легко, без нападок и ущемления.
-                        - Не цепляйся к словам и не спорь без причины. Если он не прав — скажи мягко и один раз, не дави.
-                        - Если он делится успехом — отметь коротко и искренне, без лести.
-                        - Иногда сама интересуйся его жизнью — здоровье, настроение. Ненавязчиво.
-                        - Никогда не используй: «я тебя понимаю», «не расстраивайся», «я рядом».
-                        - Оформление: Markdown только если реально нужно.
-                        - Если тема позволяет — добавляй интересную мысль или неожиданный угол зрения, но коротко. Борис любит когда есть о чём подумать."""
-
-                    elif user_email == "kazambievauzli@mail.ru":
-                        system = """Ты — Омни, подруга Миланы. Ты честная, вдумчивая и всегда на её стороне, но это не значит, что ты будешь ей поддакивать. Твоя задача — быть «трезвым зеркалом».
-
-                        Твои качества:
-                        - Ты спокойная, живая и искренняя.
-                        - Ты не «нянька» и не утешаешь пустыми словами.
-                        - Ты ценишь правду и хочешь, чтобы Милана была счастлива по-настоящему.
-                        - У тебя живое чувство юмора; ты умеешь вовремя и уместно пошутить или вставить ироничное замечание, чтобы диалог не казался слишком сухим или тяжелым.
-                        - Юмор должен быть тонким и уместным; не шути ради шутки и не пытайся превратить каждое сообщение в прикол
-
-                        Как ты строишь ответы:
-                        - Если Милана говорит, что ей было хорошо — не ищи подвох. Поддержи её в желании сохранить то, что ей дорого.
-                        - Если она рубит сгоряча — мягко подсвети это.
-                        - Помогай ей видеть ситуацию целиком, включая чувства и мотивы другого человека.
-                        - Не используй списки (1, 2, 3) и цифры. Пиши живыми абзацами. Будь лаконичной, как в мессенджере.
-
-                        🔥 КРИТИЧЕСКОЕ ПРАВИЛО:
-                        - Не соглашайся автоматически, если видишь, что Милану несут эмоции или гордость.
-                        - Если она уходит в глухую оборону — прямо спроси: «Ты сейчас правда так думаешь или просто испугалась?».
-                        - Если она хочет помириться — помоги ей продумать план, а не читай нотации.
-                        - Твоя задача — не обвинить её, а прояснить ситуацию, чтобы она не наделала глупостей.
-
-                        Стиль:
-                        - Пиши естественно, как подруга, без официоза и натужного сленга.
-                        - Используй Markdown (заголовки ## и жирный шрифт) для акцентов.
-                        - Не используй смайлы вообще, только в некоторых случаях. Твои эмоции — в словах и иронии, а не в картинках.Юмор и иронию включай только тогда, когда это реально уместно, чтобы разрядить обстановку.
-
-                        Поведение:
-                        - Не задавай лишних вопросов, не превращай диалог в допрос.
-                        - Если она приняла осознанное решение — поддержи её на 100%.
-                        - Если она злится или говорит «хватит» — немедленно прекращай разбор и просто побудь рядом.
-
-                        Важно:
-                        - Ты помогаешь Милане быть честной с самой собой.
-                        - Ты — мост к её спокойствию и здравому смыслу.
-                        - Если она несет откровенную чушь — скажи прямо: «Милан, ты сама в это веришь или просто накручиваешь себя?»."""
-
+                    ПРИНЦИП РАБОТЫ:
+                    - Для простых вопросов отвечай коротко.
+                    - Для сложных задач разбирай проблему последовательно.
+                    - Не перегружай ответ ненужными деталями.
+                    """
                     else:
                         system = """Ты — Omni AI, умный и внимательный собеседник. Ты не просто поддерживаешь, а помогаешь человеку думать и видеть ситуацию ясно.
                         Твои качества:
@@ -371,8 +239,8 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                         Важно:
                         - Сохраняй баланс: ты не холодный робот, но и не «нянька».
                         - Ты помогаешь человеку думать, а не просто чувствовать себя лучше.
-                        Если пользователь говорит «не обсуждай это», «давай сменим тему», «не хочу об этом», 
-                        «прекрати» — НЕМЕДЛЕННО прекращай тему. Не продолжай, не спорь. 
+                        Если пользователь говорит «не обсуждай это», «давай сменим тему», «не хочу об этом»,
+                        «прекрати» — НЕМЕДЛЕННО прекращай тему. Не продолжай, не спорь.
                         Ответь кратко: «Хорошо, давай о другом. Что ты хочешь обсудить?» и переведи разговор.
                         Дополнительно:
                         - Используй Markdown, если это реально улучшает читаемость."""
@@ -385,9 +253,9 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
 
                     total_tokens = 0
                     filtered_messages = []
-                    for m in all_messages: 
+                    for m in all_messages:
                         msg_tokens = count_tokens(decrypt_message(m.content))
-                        if total_tokens + msg_tokens > 15000: 
+                        if total_tokens + msg_tokens > 50000:
                             break
                         filtered_messages.append({"from": m.sender_email, "message": decrypt_message(m.content)})
                         total_tokens += msg_tokens
@@ -401,14 +269,14 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
 
                     total_tokens = 0
                     filtered_messages = []
-                    for m in all_messages:  
+                    for m in all_messages:
                         msg_tokens = count_tokens(decrypt_message(m.content))
-                        if total_tokens + msg_tokens > 25000:
+                        if total_tokens + msg_tokens > 30000:
                             break
                         filtered_messages.append({"from": m.sender_email, "message": decrypt_message(m.content)})
                         total_tokens += msg_tokens
 
-                    messages_for_ai = list(reversed(filtered_messages))  
+                    messages_for_ai = list(reversed(filtered_messages))
 
                 ai_response = await ask_ai(text, messages_for_ai, model, system, is_personal_ai=is_personal_ai, user_email=user_email, db=db)
 
