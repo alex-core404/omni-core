@@ -53,7 +53,7 @@ class ConnectionManager:
             )
 
 
-async def ask_ai(user_message: str, context_messages: list, model: str = "meta-llama/llama-4-maverick", system_prompt: str = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально. Только на русском языке.", is_personal_ai: bool = False, user_email: str = None, db: Session = None) -> str:
+async def ask_ai(user_message: str, context_messages: list, model: str = "openai/gpt-6-luna", system_prompt: str = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально. Только на русском языке.", is_personal_ai: bool = False, user_email: str = None, db: Session = None) -> str:
     print(f"🔵 ask_ai вызвана для {user_email}, db={db is not None}")
 
     time_info = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -140,7 +140,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
 
             use_70b = text.startswith("@ai70")
 
-            model = "google/gemini-3.5-flash"
+            model = "openai/gpt-6-luna"
 
             if is_ai:
                 user_message = Message(
