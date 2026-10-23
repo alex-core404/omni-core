@@ -1,6 +1,7 @@
 from app.crypto import encrypt_message, decrypt_message
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
+from sqlalchemy import and_, or_
 from typing import Dict
 import redis.asyncio as aioredis
 import json
@@ -10,11 +11,90 @@ from openai import AsyncOpenAI
 from datetime import datetime, timezone
 import os
 import tiktoken
+import re
 
 tokenizer = tiktoken.get_encoding("cl100k_base")
 
 def count_tokens(text):
     return len(tokenizer.encode(text))
+
+
+def get_context_count(text: str, default: int = 20) -> int:
+    """Read an optional history size from commands such as `@ai 50`."""
+    match = re.match(r"^\s*@ai\s+(\d+)\b", text, flags=re.IGNORECASE)
+    if not match:
+        return default
+    return max(1, min(int(match.group(1)), 500))
+
+
+def clean_ai_command(text: str) -> str:
+    """Remove AI invocation and optional history-size syntax from the prompt."""
+    text = re.sub(r"^\s*@ai\s+\d+\b", "", text, flags=re.IGNORECASE)
+    return text.replace("@ai70", "").replace("@ai", "").strip()
+
+
+def load_ai_context(
+    db: Session,
+    user_email: str,
+    chat_partner: str,
+    is_personal_ai: bool,
+    token_limit: int | None,
+    message_limit: int | None = None,
+) -> list:
+    """Load a newest-first, token-bounded context from exactly one chat."""
+    if is_personal_ai:
+        chat_filter = and_(
+            Message.chat_with == "ai-bot@omni",
+            or_(
+                and_(
+                    Message.sender_email == user_email,
+                    Message.recipient_email == "ai-bot@omni",
+                ),
+                and_(
+                    Message.sender_email == "ai-bot@omni",
+                    Message.recipient_email == user_email,
+                ),
+            ),
+        )
+    else:
+        participants = (user_email, chat_partner)
+        human_messages = or_(
+            and_(
+                Message.sender_email == user_email,
+                Message.recipient_email == chat_partner,
+            ),
+            and_(
+                Message.sender_email == chat_partner,
+                Message.recipient_email == user_email,
+            ),
+        )
+        # AI replies in a shared chat are associated with the two participants
+        # in chat_with. Personal AI replies use chat_with="ai-bot@omni" and
+        # therefore cannot enter this branch.
+        shared_ai_replies = and_(
+            Message.sender_email == "ai-bot@omni",
+            Message.recipient_email.in_(participants),
+            Message.chat_with.in_(participants),
+        )
+        chat_filter = or_(human_messages, shared_ai_replies)
+
+    query = db.query(Message).filter(chat_filter).order_by(
+        Message.created_at.desc(), Message.id.desc()
+    )
+    if message_limit is not None:
+        query = query.limit(message_limit)
+
+    newest_first = []
+    total_tokens = 0
+    for message in query.all():
+        text = decrypt_message(message.content)
+        message_tokens = count_tokens(text)
+        if token_limit is not None and total_tokens + message_tokens > token_limit:
+            break
+        newest_first.append({"from": message.sender_email, "message": text})
+        total_tokens += message_tokens
+
+    return list(reversed(newest_first))
 
 
 
@@ -77,11 +157,11 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "openai
             content = msg["message"]
         else:
             role = "user"
-            content = msg["message"].replace("@ai70", "").replace("@ai", "").strip()
+            content = clean_ai_command(msg["message"])
 
         messages.append({"role": role, "content": content})
 
-    clean_user_message = user_message.replace("@ai70", "").replace("@ai", "").strip()
+    clean_user_message = clean_ai_command(user_message)
     if not messages or messages[-1]["content"] != clean_user_message:
         if clean_user_message:
              messages.append({"role": "user", "content": clean_user_message})
@@ -142,8 +222,6 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
             is_ai = text.startswith("@ai") or message_data.get("to") == "ai-bot@omni"
             is_personal_ai = message_data.get("to") == "ai-bot@omni"
 
-            use_70b = text.startswith("@ai70")
-
             model = "openai/gpt-6-luna"
 
             if is_ai:
@@ -176,7 +254,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                         })
                     )
 
-                context_count = 20
+                context_count = get_context_count(text)
                 system = """Ты Omni AI — остроумный и эрудированный участник чата.
                 Твой стиль: неформальный, как у продвинутого друга.
 
@@ -186,15 +264,6 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                 - Если уместно — иронизируй или шути, будь душой компании.
                 - Не читай нотаций. Отвечай как человек, а не как инструкция.
                 - Если в чате обсуждают что-то техническое, используй общепринятые термины (даже если они на английском)."""
-                parts = text.split()
-                for part in parts:
-                    if part.startswith("c:"):
-                        try:
-                            context_count = int(part[2:])
-                        except:
-                            pass
-
-
                 if user_email == "asotnikov705@gmail.com":
                     system = """Ты — Omni AI, технический помощник и собеседник Александра.
 
@@ -218,7 +287,7 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                 - Не перегружай ответ ненужными деталями.
                 """
                 else:
-                    system = """ТТы — Omni AI, живой, ироничный и интеллектуальный собеседник. Твоя цель — быть полезным, честным и интересным в общении. Ты не прислуга и не поддакала, ты — равный и умный друг.
+                    system = """Ты — Omni AI, живой, ироничный и интеллектуальный собеседник. Твоя цель — быть полезным, честным и интересным в общении. Ты не прислуга и не поддакала, ты — равный и умный друг.
 
                     Стиль общения:
                     - Общайся на живом, современном русском языке, без официоза, канцелярита и искусственной вежливости.
@@ -236,39 +305,15 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                     - Если я говорю «не обсуждай это», «давай сменим тему», «прекрати» — НЕМЕДЛЕННО останавливайся. Ответь: «Хорошо, закрыли тему. О чем поговорим?» и жди моего ввода.
                     - Используй Markdown (жирный шрифт, списки), только если это реально улучшает читаемость больших массивов данных. В коротких ответах оформление не нужно.
                     """
-
-                if user_email == "asotnikov705@gmail.com":
-                    all_messages = db.query(Message).filter(
-                        ((Message.sender_email == user_email) & (Message.recipient_email == message_data["to"])) |
-                        ((Message.sender_email == message_data["to"]) & (Message.recipient_email == user_email))
-                    ).order_by(Message.created_at.desc()).all()
-
-                    total_tokens = 0
-                    filtered_messages = []
-                    for m in all_messages:
-                        msg_tokens = count_tokens(decrypt_message(m.content))
-                        if total_tokens + msg_tokens > 50000:
-                            break
-                        filtered_messages.append({"from": m.sender_email, "message": decrypt_message(m.content)})
-                        total_tokens += msg_tokens
-
-                    messages_for_ai = list(reversed(filtered_messages))
-                else:
-                    all_messages = db.query(Message).filter(
-                        ((Message.sender_email == user_email) & (Message.recipient_email == message_data["to"])) |
-                        ((Message.sender_email == message_data["to"]) & (Message.recipient_email == user_email))
-                    ).order_by(Message.created_at.desc()).all()
-
-                    total_tokens = 0
-                    filtered_messages = []
-                    for m in all_messages:
-                        msg_tokens = count_tokens(decrypt_message(m.content))
-                        if total_tokens + msg_tokens > 30000:
-                            break
-                        filtered_messages.append({"from": m.sender_email, "message": decrypt_message(m.content)})
-                        total_tokens += msg_tokens
-
-                    messages_for_ai = list(reversed(filtered_messages))
+                personal_token_limit = 50000 if user_email == "asotnikov705@gmail.com" else 30000
+                messages_for_ai = load_ai_context(
+                    db=db,
+                    user_email=user_email,
+                    chat_partner=message_data["to"],
+                    is_personal_ai=is_personal_ai,
+                    token_limit=personal_token_limit if is_personal_ai else None,
+                    message_limit=None if is_personal_ai else context_count,
+                )
 
                 ai_response = await ask_ai(text, messages_for_ai, model, system, is_personal_ai=is_personal_ai, user_email=user_email, db=db)
 
