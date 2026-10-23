@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from app.routers import auth, chat, history, admin, contacts, upload, reactions
+import os
+
+os.makedirs("uploads", exist_ok=True)
 
 app = FastAPI()
 

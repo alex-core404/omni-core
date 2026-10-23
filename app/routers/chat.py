@@ -17,10 +17,6 @@ def count_tokens(text):
     return len(tokenizer.encode(text))
 
 
-openai_client = AsyncOpenAI(
-    api_key=os.getenv("ROUTERAI_API_KEY"),
-    base_url="https://routerai.ru/api/v1"
-)
 
 router = APIRouter()
 
@@ -56,6 +52,14 @@ class ConnectionManager:
 async def ask_ai(user_message: str, context_messages: list, model: str = "openai/gpt-6-luna", system_prompt: str = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально. Только на русском языке.", is_personal_ai: bool = False, user_email: str = None, db: Session = None) -> str:
     print(f"🔵 ask_ai вызвана для {user_email}, db={db is not None}")
 
+    api_key = os.getenv("ROUTERAI_API_KEY")
+    if not api_key:
+        return "Ошибка: API-ключ для ИИ не настроен (проверьте .env)"
+    
+    client = AsyncOpenAI(
+        api_key=api_key,
+        base_url="https://routerai.ru/api/v1"
+    )
     time_info = datetime.now().strftime("%Y-%m-%d %H:%M")
 
 
@@ -90,7 +94,7 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "openai
 
     max_tokens_limit = 2500 if is_personal_ai else 300
 
-    response = await openai_client.chat.completions.create(
+    response = await client.chat.completions.create(
         model=model,
         messages=messages,
         max_tokens=max_tokens_limit,
