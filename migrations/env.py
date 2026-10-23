@@ -8,6 +8,7 @@ from app.models.user import User
 from app.models.message import Message
 from app.models.contact import Contact
 from app.database import Base
+from app.models.reaction import Reaction
 
 target_metadata = Base.metadata
 
