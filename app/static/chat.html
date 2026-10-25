@@ -21,7 +21,8 @@
         let ws;
         function connect() {
             const email = document.getElementById("email").value;
-            ws = new WebSocket(`ws://147.45.212.180:8000/ws/${email}`);
+            const wsProto = location.protocol === "https:" ? "wss:" : "ws:";
+            ws = new WebSocket(`${wsProto}//${location.host}/ws/${email}`);
             ws.onmessage = function(event) {
                 const data = JSON.parse(event.data);
                 const div = document.getElementById("messages");

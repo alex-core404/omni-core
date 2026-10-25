@@ -377,7 +377,7 @@
                 return hljs.highlightAuto(code).value;
             }
         });
-        const API = "http://147.45.212.180:8000";
+        const API = window.location.origin;
         const email = localStorage.getItem("email");
         const token = localStorage.getItem("token");
 
@@ -640,7 +640,8 @@
 
 
         function connectWS() {
-            ws = new WebSocket(`ws://147.45.212.180:8000/ws/${email}`);
+            const wsProto = location.protocol === "https:" ? "wss:" : "ws:";
+            ws = new WebSocket(`${wsProto}//${location.host}/ws/${email}`);
             ws.onopen = function(e) {
                 console.log("Connected to WebSocket");
 
