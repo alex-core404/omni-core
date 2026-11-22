@@ -400,6 +400,8 @@
         let currentContact = null;
         let contacts = [];
         let seenMessageIds = new Set();
+        let lastMessageId = 0;
+        let historyReady = false;
 
         function toggleSidebar() {
             const sidebar = document.querySelector(".sidebar");
@@ -577,6 +579,8 @@
 
             document.getElementById("messages").innerHTML = "";
             seenMessageIds = new Set();
+            lastMessageId = 0;
+            historyReady = false;
 
             const chat = document.querySelector(".chat");
 
@@ -613,21 +617,27 @@
             }
             const res = await fetch(url, { headers: {"Authorization": `Bearer ${token}`} });
             const data = await res.json();
+            if (currentContact !== contact) return;
             data.forEach(msg => {
                 const type = msg.is_ai ? "in" : (msg.from == email ? "out" : "in");
                 addMessage(msg.message, type, msg.created_at, msg.id, msg.is_read, msg.reply_to_id, msg.reply_to_text, msg.is_ai);
             });
+            historyReady = true;
         }
 
         async function syncOpenChat() {
-            if (!currentContact) return;
-            let url = `${API}/history/${email}/${currentContact}`;
-            if (currentContact === "ai-bot@omni") {
+            if (!currentContact || !historyReady) return;
+            const contact = currentContact;
+            let url = `${API}/history/${email}/${contact}`;
+            if (contact === "ai-bot@omni") {
                 url = `${API}/ai-history/${email}`;
+            }
+            if (lastMessageId) {
+                url += `?after_id=${lastMessageId}`;
             }
             try {
                 const res = await fetch(url, { headers: {"Authorization": `Bearer ${token}`} });
-                if (!res.ok) return;
+                if (!res.ok || currentContact !== contact) return;
                 const data = await res.json();
                 data.forEach(msg => {
                     const type = msg.is_ai ? "in" : (msg.from == email ? "out" : "in");
@@ -718,7 +728,10 @@
 
         function addMessage(text, type, time = null, msgId = null, isRead = false, replyId = null, replyText = null, isAi = false) {
             if (msgId && seenMessageIds.has(String(msgId))) return;
-            if (msgId) seenMessageIds.add(String(msgId));
+            if (msgId) {
+                seenMessageIds.add(String(msgId));
+                if (Number(msgId) > lastMessageId) lastMessageId = Number(msgId);
+            }
             const div = document.getElementById("messages");
             const msg = document.createElement("div");
             msg.className = "message " + type;
