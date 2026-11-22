@@ -108,10 +108,19 @@ class ConnectionManager:
 
     async def connect(self, websocket: WebSocket, user_email: str):
         await websocket.accept()
+        previous = self.active_connections.get(user_email)
         self.active_connections[user_email] = websocket
         await redis_client.set(f"online:{user_email}", "1")
+        if previous is not None and previous is not websocket:
+            try:
+                await previous.close()
+            except Exception:
+                pass
 
-    async def disconnect(self, user_email: str):
+    async def disconnect(self, user_email: str, websocket: WebSocket):
+        current = self.active_connections.get(user_email)
+        if current is not websocket:
+            return
         self.active_connections.pop(user_email, None)
         await redis_client.delete(f"online:{user_email}")
         await redis_client.set(f"last_seen:{user_email}", datetime.now(timezone.utc).isoformat())
@@ -375,9 +384,10 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
             )
 
     except WebSocketDisconnect:
-        await manager.disconnect(user_email)
+        pass
     finally:
         db.close()
+        await manager.disconnect(user_email, websocket)
 
 @router.get("/online/{user_email}")
 async def check_online(user_email: str):

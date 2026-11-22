@@ -399,6 +399,7 @@
         let ws;
         let currentContact = null;
         let contacts = [];
+        let seenMessageIds = new Set();
 
         function toggleSidebar() {
             const sidebar = document.querySelector(".sidebar");
@@ -575,6 +576,7 @@
             }
 
             document.getElementById("messages").innerHTML = "";
+            seenMessageIds = new Set();
 
             const chat = document.querySelector(".chat");
 
@@ -615,6 +617,25 @@
                 const type = msg.is_ai ? "in" : (msg.from == email ? "out" : "in");
                 addMessage(msg.message, type, msg.created_at, msg.id, msg.is_read, msg.reply_to_id, msg.reply_to_text, msg.is_ai);
             });
+        }
+
+        async function syncOpenChat() {
+            if (!currentContact) return;
+            let url = `${API}/history/${email}/${currentContact}`;
+            if (currentContact === "ai-bot@omni") {
+                url = `${API}/ai-history/${email}`;
+            }
+            try {
+                const res = await fetch(url, { headers: {"Authorization": `Bearer ${token}`} });
+                if (!res.ok) return;
+                const data = await res.json();
+                data.forEach(msg => {
+                    const type = msg.is_ai ? "in" : (msg.from == email ? "out" : "in");
+                    addMessage(msg.message, type, msg.created_at, msg.id, msg.is_read, msg.reply_to_id, msg.reply_to_text, msg.is_ai);
+                });
+            } catch (err) {
+                console.error("Ошибка подтягивания чата:", err);
+            }
         }
 
         function spawnBackgroundHearts() {
@@ -696,6 +717,8 @@
 
 
         function addMessage(text, type, time = null, msgId = null, isRead = false, replyId = null, replyText = null, isAi = false) {
+            if (msgId && seenMessageIds.has(String(msgId))) return;
+            if (msgId) seenMessageIds.add(String(msgId));
             const div = document.getElementById("messages");
             const msg = document.createElement("div");
             msg.className = "message " + type;
@@ -946,7 +969,7 @@
                 const data = await res.json();
                 if (data.url) {
                     ws.send(JSON.stringify({to: currentContact, message: data.url}));
-                    addMessage(data.url, "out");
+                    syncOpenChat();
                 }
             }
             document.getElementById("file-input").value = "";
@@ -964,10 +987,8 @@
             if (text.startsWith("@ai") || currentContact === "ai-bot@omni") {
                 showAiTypingIndicator();
             }
-            if (!text.startsWith("@ai") && currentContact !== "ai-bot@omni") {
-                addMessage(text, "out", null, null, false, replyToId, replyToText);
-            }
             input.value = "";
+            syncOpenChat();
             autoResize();
             cancelReply();
         }
@@ -987,6 +1008,7 @@
         connectWS();
         updateUnreadCount();
         setInterval(updateUnreadCount, 3000); // каждые 3 секунды
+        setInterval(syncOpenChat, 3000);
     </script>
 </body>
 </html>
