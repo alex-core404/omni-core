@@ -2,6 +2,18 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Omni">
+    <link rel="manifest" href="/static/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/static/icon-180.png">
+    <script>
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register("/static/sw.js");
+        }
+    </script>
     <title>Omni - Вход</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -18,7 +30,7 @@
             background: #1a1a1a;
             padding: 40px;
             border-radius: 12px;
-            width: 360px;
+            width: min(360px, calc(100% - 32px));
         }
         h1 { text-align: center; margin-bottom: 30px; font-size: 28px; }
         input {
@@ -29,7 +41,7 @@
             border: 1px solid #333;
             border-radius: 8px;
             color: #fff;
-            font-size: 15px;
+            font-size: 16px;
         }
         button {
             width: 100%;

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from app.routers import auth, chat, history, admin, contacts, upload, reactions
+from app.routers import auth, chat, history, admin, contacts, upload, reactions, push
 import os
 
 os.makedirs("uploads", exist_ok=True)
@@ -17,6 +17,7 @@ app.include_router(admin.router)
 app.include_router(contacts.router)
 app.include_router(upload.router)
 app.include_router(reactions.router)
+app.include_router(push.router)
 
 @app.get("/")
 async def root():

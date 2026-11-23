@@ -2,16 +2,48 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Omni">
+    <link rel="manifest" href="/static/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/static/icon-180.png">
+    <script>
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register("/static/sw.js");
+        }
+        async function markChatOpen() {
+            if (!("caches" in window)) return;
+            const cache = await caches.open("omni-presence");
+            if (document.visibilityState !== "visible") {
+                await cache.delete("/presence");
+                return;
+            }
+            await cache.put("/presence", new Response(JSON.stringify({ at: Date.now() }), {
+                headers: {"Content-Type": "application/json"}
+            }));
+            if (!("serviceWorker" in navigator)) return;
+            const reg = await navigator.serviceWorker.getRegistration();
+            if (!reg) return;
+            const notes = await reg.getNotifications();
+            notes.forEach((note) => note.close());
+        }
+        markChatOpen();
+        setInterval(markChatOpen, 2000);
+        document.addEventListener("visibilitychange", markChatOpen);
+    </script>
     <title>Omni</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { overflow: hidden; }
         body {
             background: #0f0f0f;
             color: #fff;
             font-family: sans-serif;
             display: flex;
-            height: 100dvh;
+            height: var(--app-height, 100dvh);
+            transform: translateY(var(--app-top, 0px));
         }
         .sidebar {
             width: 280px;
@@ -59,16 +91,19 @@
         }
         .chat {
             flex: 1;
+            min-height: 0;
             display: flex;
             flex-direction: column;
         }
         .chat-header {
+            flex-shrink: 0;
             padding: 20px;
             background: #1a1a1a;
             border-bottom: 1px solid #2a2a2a;
         }
         .messages {
             flex: 1;
+            min-height: 0;
             padding: 20px;
             overflow-y: auto;
             display: flex;
@@ -90,6 +125,7 @@
             align-self: flex-start;
         }
         .input-area {
+            flex-shrink: 0;
             padding: 16px 20px;
             background: #1a1a1a;
             border-top: 1px solid #2a2a2a;
@@ -103,7 +139,7 @@
             border: 1px solid #333;
             border-radius: 8px;
             color: #fff;
-            font-size: 15px;
+            font-size: 16px;
         }
         .input-area textarea {
             flex: 1;
@@ -112,7 +148,7 @@
             border: 1px solid #333;
             border-radius: 8px;
             color: #fff;
-            font-size: 15px;
+            font-size: 16px;
             font-family: sans-serif;
             resize: none;
             white-space: pre-wrap;
@@ -169,16 +205,6 @@
             }
             #menu-btn {
                 display: inline-block !important;
-            }
-            .chat-header {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                z-index: 50;
-            }
-            .messages {
-                padding-top: 80px;
             }
         }
 
@@ -333,6 +359,7 @@
     <div class="sidebar">
         <div class="sidebar-header">
             <span id="my-username" style="font-size:13px;color:#ccc;"></span>
+            <button id="push-btn" class="logout" onclick="enablePush()" style="margin-right:8px;">Уведомления</button>
             <button class="logout" onclick="window.location.href='/static/profile.html'" style="margin-right:8px;">Профиль</button>
             <button class="logout" onclick="logout()">Выйти</button>
         </div>
@@ -382,6 +409,24 @@
         const token = localStorage.getItem("token");
 
         if (!token) window.location.href = "/static/index.html";
+
+        function pinChatToScreen() {
+            const vv = window.visualViewport;
+            const height = vv ? vv.height : window.innerHeight;
+            const top = vv ? vv.offsetTop : 0;
+            document.documentElement.style.setProperty("--app-height", height + "px");
+            document.documentElement.style.setProperty("--app-top", top + "px");
+            const messages = document.getElementById("messages");
+            if (!messages) return;
+            const distanceFromBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight;
+            if (distanceFromBottom < 120) messages.scrollTop = messages.scrollHeight;
+        }
+        if (window.visualViewport) {
+            visualViewport.addEventListener("resize", pinChatToScreen);
+            visualViewport.addEventListener("scroll", pinChatToScreen);
+        }
+        window.addEventListener("resize", pinChatToScreen);
+        pinChatToScreen();
 
         document.getElementById("my-username").innerText = "@" + (localStorage.getItem("username") || email);
         if (!localStorage.getItem("username")) {
@@ -581,6 +626,7 @@
             seenMessageIds = new Set();
             lastMessageId = 0;
             historyReady = false;
+            hideAiTypingIndicator();
 
             const chat = document.querySelector(".chat");
 
@@ -732,6 +778,10 @@
                 seenMessageIds.add(String(msgId));
                 if (Number(msgId) > lastMessageId) lastMessageId = Number(msgId);
             }
+            if (isAi && aiTypingSince) {
+                const fresh = time && new Date(time).getTime() >= aiTypingSince - 5000;
+                if (historyReady || fresh) hideAiTypingIndicator();
+            }
             const div = document.getElementById("messages");
             const msg = document.createElement("div");
             msg.className = "message " + type;
@@ -857,6 +907,14 @@
             }
         }
         let aiTypingElement = null;
+        let aiTypingTimer = null;
+        let aiTypingSince = 0;
+
+        function scheduleAiTypingIndicator() {
+            clearTimeout(aiTypingTimer);
+            aiTypingSince = Date.now();
+            aiTypingTimer = setTimeout(showAiTypingIndicator, 3000);
+        }
 
         function showAiTypingIndicator() {
             if (aiTypingElement) return;
@@ -882,6 +940,9 @@
         }
 
         function hideAiTypingIndicator() {
+            clearTimeout(aiTypingTimer);
+            aiTypingTimer = null;
+            aiTypingSince = 0;
             if (aiTypingElement) {
                 aiTypingElement.remove();
                 aiTypingElement = null;
@@ -998,12 +1059,69 @@
                 reply_to_id: replyToId
             }));
             if (text.startsWith("@ai") || currentContact === "ai-bot@omni") {
-                showAiTypingIndicator();
+                scheduleAiTypingIndicator();
             }
             input.value = "";
             syncOpenChat();
             autoResize();
             cancelReply();
+        }
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = "=".repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+            const raw = atob(base64);
+            return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+        }
+
+        async function enablePush() {
+            if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+                alert("Этот телефон не умеет уведомления");
+                return;
+            }
+            const ready = navigator.serviceWorker.ready;
+            const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000));
+            let reg;
+            try {
+                reg = await Promise.race([ready, timeout]);
+            } catch (e) {
+                alert("Скрипт sw.js не установился. Проверь, что файл залит, и открой иконку заново.");
+                return;
+            }
+            let sub = await reg.pushManager.getSubscription();
+            if (!sub) {
+                const permission = await Notification.requestPermission();
+                if (permission !== "granted") {
+                    alert("Разрешение не дано");
+                    return;
+                }
+                const keyRes = await fetch(`${API}/push/vapid-public`, {
+                    headers: {"Authorization": `Bearer ${token}`}
+                });
+                const keyData = await keyRes.json();
+                if (!keyRes.ok) {
+                    alert(keyData.detail || "Сервер не отдал ключ");
+                    return;
+                }
+                sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(keyData.public_key)
+                });
+            }
+            const res = await fetch(`${API}/push/subscribe`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify(sub)
+            });
+            if (res.ok) {
+                document.getElementById("push-btn").style.display = "none";
+                alert("Адрес телефона сохранён. Само уведомление придёт на следующем шаге.");
+            } else {
+                alert("Сервер не сохранил адрес");
+            }
         }
 
         function logout() {
@@ -1013,7 +1131,17 @@
         }
 
 
+        async function hidePushButtonIfEnabled() {
+            if (!("serviceWorker" in navigator) || Notification.permission !== "granted") return;
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                const sub = await reg.pushManager.getSubscription();
+                if (sub) document.getElementById("push-btn").style.display = "none";
+            } catch (e) {}
+        }
+
         loadContacts();
+        hidePushButtonIfEnabled();
         updateOnlineStatus();
         updateUnread();
         setInterval(updateOnlineStatus, 5000);

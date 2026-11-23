@@ -9,6 +9,7 @@ from app.models.message import Message
 from app.models.contact import Contact
 from app.database import Base
 from app.models.reaction import Reaction
+from app.models.push_subscription import PushSubscription
 
 target_metadata = Base.metadata
 

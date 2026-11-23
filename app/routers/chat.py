@@ -7,6 +7,8 @@ import redis.asyncio as aioredis
 import json
 from app.database import SessionLocal
 from app.models.message import Message
+from app.models.user import User
+from app.routers.push import notify_user
 from openai import AsyncOpenAI
 from datetime import datetime, timezone
 import os
@@ -336,24 +338,31 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                 db.commit()
                 db.refresh(ai_message)
 
-                if user_email in manager.active_connections:
-                    await manager.active_connections[user_email].send_text(
-                        json.dumps({
-                            "from": "ai-bot@omni",
-                            "message": ai_response,
-                            "id": ai_message.id,
-                            "chat_with": message_data["to"]
-                        })
-                    )
-                if message_data["to"] in manager.active_connections:
-                    await manager.active_connections[message_data["to"]].send_text(
-                        json.dumps({
-                            "from": "ai-bot@omni",
-                            "message": ai_response,
-                            "id": ai_message.id,
-                            "chat_with": user_email
-                        })
-                    )
+                try:
+                    if user_email in manager.active_connections:
+                        await manager.active_connections[user_email].send_text(
+                            json.dumps({
+                                "from": "ai-bot@omni",
+                                "message": ai_response,
+                                "id": ai_message.id,
+                                "chat_with": message_data["to"]
+                            })
+                        )
+                except Exception:
+                    pass
+                try:
+                    if message_data["to"] in manager.active_connections:
+                        await manager.active_connections[message_data["to"]].send_text(
+                            json.dumps({
+                                "from": "ai-bot@omni",
+                                "message": ai_response,
+                                "id": ai_message.id,
+                                "chat_with": user_email
+                            })
+                        )
+                except Exception:
+                    pass
+                await notify_user(db, user_email, "Omni AI", ai_response)
                 continue
 
 
@@ -374,16 +383,22 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
             db.commit()
             db.refresh(db_message)
 
-            await manager.send_message(
-                message=encrypt_message(message_data["message"]),
-                sender=user_email,
-                recipient=message_data["to"],
-                msg_id=db_message.id,
-                reply_to_id=reply_to_id,
-                reply_to_text=reply_to_text
-            )
+            try:
+                await manager.send_message(
+                    message=encrypt_message(message_data["message"]),
+                    sender=user_email,
+                    recipient=message_data["to"],
+                    msg_id=db_message.id,
+                    reply_to_id=reply_to_id,
+                    reply_to_text=reply_to_text
+                )
+            except Exception:
+                pass
+            sender = db.query(User).filter(User.email == user_email).first()
+            sender_name = sender.username if sender and sender.username else user_email
+            await notify_user(db, message_data["to"], sender_name, message_data["message"])
 
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, RuntimeError):
         pass
     finally:
         db.close()
