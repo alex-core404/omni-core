@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -11,7 +11,11 @@
     <link rel="apple-touch-icon" href="/static/icon-180.png">
     <script>
         if ("serviceWorker" in navigator) {
-            navigator.serviceWorker.register("/static/sw.js");
+            navigator.serviceWorker.getRegistrations().then((regs) => {
+                regs.forEach((reg) => {
+                    if (!reg.scope.includes("/static/push/")) reg.unregister();
+                });
+            });
         }
         async function markChatOpen() {
             if (!("caches" in window)) return;
@@ -36,58 +40,196 @@
     <title>Omni</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { background: #080c0a; }
         html, body { overflow: hidden; }
         body {
-            background: #0f0f0f;
-            color: #fff;
+            position: fixed;
+            left: 0;
+            right: 0;
+            top: var(--app-top, 0px);
+            bottom: var(--app-bottom, 0px);
+            height: var(--app-height, auto);
+            background: #080c0a;
+            color: #e4efe9;
             font-family: sans-serif;
             display: flex;
-            height: var(--app-height, 100dvh);
-            transform: translateY(var(--app-top, 0px));
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
         }
+        body.keyboard-open {
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        #login-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            background: #080c0a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        #login-screen[hidden] { display: none; }
+        .login-card { width: min(360px, 100%); }
+        .login-card h1 {
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 28px;
+            font-weight: 500;
+        }
+        .login-card input {
+            width: 100%;
+            display: block;
+            padding: 12px;
+            margin-bottom: 12px;
+            background: #1a2420;
+            border: 1px solid #1c2a24;
+            border-radius: 8px;
+            color: #e4efe9;
+            font-size: 16px;
+        }
+        .login-card button {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #3ddc97;
+            border: none;
+            border-radius: 8px;
+            color: #04140d;
+            font-size: 15px;
+        }
+        .login-card button.secondary { background: #1a2420; color: #e4efe9; }
+        .login-error { color: #ff6b6b; text-align: center; min-height: 1.2em; }
         .sidebar {
             width: 280px;
-            background: #1a1a1a;
+            background: #080c0a;
             display: flex;
             flex-direction: column;
-            border-right: 1px solid #2a2a2a;
+            border-right: 1px solid #15201b;
+            overflow: hidden;
         }
         .sidebar-header {
-            padding: 20px;
-            border-bottom: 1px solid #2a2a2a;
+            padding: 16px;
+            border-bottom: 1px solid #15201b;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 8px;
+            overflow: hidden;
         }
-        .contacts { flex: 1; overflow-y: auto; }
-        .contact {
-            padding: 16px 20px;
+        #my-username {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 13px;
+            color: #e4efe9;
+        }
+        .nav-btn {
+            background: none;
+            border: none;
+            color: #5d7569;
             cursor: pointer;
-            border-bottom: 1px solid #222;
+            font-size: 13px;
+            font-family: sans-serif;
         }
-        .contact:hover { background: #2a2a2a; }
-        .contact.active { background: #2a2a2a; }
+        .nav-btn.danger { color: #ff6b6b; }
+        .contacts { flex: 1; overflow-y: auto; }
+        .contacts-label {
+            padding: 14px 16px 6px;
+            font-family: ui-monospace, "SF Mono", Menlo, monospace;
+            font-size: 11px;
+            color: #5d7569;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .contact {
+            padding: 8px 8px 8px 16px;
+            border-bottom: 1px solid #15201b;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        .contact.active {
+            background: #0e1512;
+            border-left: 2px solid #3ddc97;
+            padding-left: 14px;
+        }
+        .contact-name {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .contact-ai .contact-name { color: #3ddc97; }
+        .ai-mark {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #3ddc97;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+        .presence {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #3a3f3c;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+        .unread-badge {
+            display: none;
+            background: #3ddc97;
+            color: #04140d;
+            border-radius: 10px;
+            padding: 2px 7px;
+            margin-right: 4px;
+            font-family: ui-monospace, "SF Mono", Menlo, monospace;
+            font-size: 11px;
+        }
+        .contact-del {
+            width: 44px;
+            height: 44px;
+            flex-shrink: 0;
+            background: none;
+            border: none;
+            color: #5d7569;
+            font-size: 16px;
+            cursor: pointer;
+        }
         .add-contact {
-            padding: 16px 20px;
-            border-top: 1px solid #2a2a2a;
+            padding: 12px;
+            border-top: 1px solid #15201b;
             display: flex;
             gap: 8px;
         }
         .add-contact input {
             flex: 1;
-            padding: 8px;
-            background: #2a2a2a;
-            border: 1px solid #333;
-            border-radius: 6px;
-            color: #fff;
+            min-width: 0;
+            padding: 10px 12px;
+            background: #080c0a;
+            border: 1px solid #1c2a24;
+            border-radius: 4px;
+            color: #e4efe9;
+            font-size: 16px;
+            font-family: sans-serif;
         }
+        .add-contact input::placeholder { color: #5d7569; }
         .add-contact button {
-            padding: 8px 12px;
-            background: #6c63ff;
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            background: #3ddc97;
             border: none;
-            border-radius: 6px;
-            color: #fff;
+            border-radius: 4px;
+            color: #04140d;
             cursor: pointer;
+            font-size: 18px;
         }
         .chat {
             flex: 1;
@@ -97,77 +239,273 @@
         }
         .chat-header {
             flex-shrink: 0;
-            padding: 20px;
-            background: #1a1a1a;
-            border-bottom: 1px solid #2a2a2a;
+            min-height: 62px;
+            padding: 12px 14px;
+            background: #080c0a;
+            border-bottom: 1px solid rgba(61, 220, 151, .14);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+        #menu-btn {
+            display: none;
+            width: 32px;
+            background: none;
+            border: none;
+            color: #e4efe9;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            flex-shrink: 0;
+        }
+        #header-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #3a3f3c;
+            flex-shrink: 0;
+            display: none;
+        }
+        #chat-title {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 15px;
+            font-weight: 500;
+        }
+        #typing-indicator {
+            font-family: ui-monospace, "SF Mono", Menlo, monospace;
+            font-size: 11px;
+            color: #5d7569;
+            display: none;
+        }
+        .ai-orb {
+            display: none;
+            width: 38px;
+            height: 38px;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .chat.ai-open .ai-orb { display: block; }
+        .ai-orb .core {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 14px;
+            height: 14px;
+            margin: -7px 0 0 -7px;
+            border-radius: 50%;
+            background: #3ddc97;
+            box-shadow: 0 0 16px 3px rgba(61, 220, 151, .7);
+        }
+        .ai-orb .ring {
+            position: absolute;
+            inset: 0;
+            border: 1px solid #3ddc97;
+            border-radius: 50%;
+            animation: orb-pulse 2.4s ease-out infinite;
+        }
+        .ai-orb .ring.late { animation-delay: 1.2s; }
+        @keyframes orb-pulse {
+            from { transform: scale(.45); opacity: .9; }
+            to { transform: scale(1.5); opacity: 0; }
         }
         .messages {
             flex: 1;
             min-height: 0;
-            padding: 20px;
+            padding: 16px 14px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
+            gap: 12px;
+        }
+        .empty-chat {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #5d7569;
+            font-family: ui-monospace, "SF Mono", Menlo, monospace;
+            font-size: 11px;
+        }
+        .chat:has(#empty-chat) .input-area { display: none; }
+        .date-sep {
+            display: flex;
+            align-items: center;
             gap: 10px;
+            color: #6b8578;
+            font-family: ui-monospace, "SF Mono", Menlo, monospace;
+            font-size: 11px;
+        }
+        .date-sep::before,
+        .date-sep::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: rgba(61, 220, 151, .14);
         }
         .message {
-            max-width: 60%;
-            padding: 10px 14px;
-            border-radius: 10px;
+            position: relative;
+            width: fit-content;
+            max-width: 86%;
+            display: flex;
+            flex-direction: column;
             font-size: 14px;
+            line-height: 1.35;
         }
         .message.out {
-            background: #6c63ff;
+            max-width: 78%;
             align-self: flex-end;
+            background: #3ddc97;
+            color: #04140d;
+            border-radius: 12px 12px 2px 12px;
+            padding: 8px 10px;
         }
         .message.in {
-            background: #2a2a2a;
             align-self: flex-start;
+            background: #0e1512;
+            color: #e4efe9;
+            border: 1px solid #1f3a2e;
+            border-radius: 4px;
+            padding: 10px 12px;
+        }
+        .ai-caption {
+            margin-bottom: 6px;
+            color: #3ddc97;
+            font-family: ui-monospace, "SF Mono", Menlo, monospace;
+            font-size: 11px;
+        }
+        .corner {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            pointer-events: none;
+        }
+        .corner.tl {
+            top: -1px;
+            left: -1px;
+            border-top: 2px solid #3ddc97;
+            border-left: 2px solid #3ddc97;
+        }
+        .corner.br {
+            right: -1px;
+            bottom: -1px;
+            border-right: 2px solid #3ddc97;
+            border-bottom: 2px solid #3ddc97;
+        }
+        .msg-line {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+        }
+        .msg-body { min-width: 0; }
+        .msg-meta {
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-family: ui-monospace, "SF Mono", Menlo, monospace;
+            font-size: 11px;
+            line-height: 1;
+            white-space: nowrap;
+        }
+        .message.out .msg-meta { color: rgba(4, 20, 13, .65); }
+        .message.in .msg-meta { color: #5d7569; }
+        .message.ai,
+        .message.ai-typing {
+            background: rgba(61, 220, 151, .07);
+            border-color: rgba(61, 220, 151, .28);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+        }
+        .message.ai .msg-meta { color: #7f9a8d; }
+        .message.out .tick.read { color: #04140d; }
+        .message.ai-typing {
+            flex-direction: row;
+            align-items: center;
+            gap: 5px;
+        }
+        .typing-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #3ddc97;
+            animation: typing-wave 1.2s ease-in-out infinite;
+        }
+        .typing-dot.d2 { animation-delay: .2s; }
+        .typing-dot.d3 { animation-delay: .4s; }
+        @keyframes typing-wave {
+            0%, 100% { transform: translateY(0); opacity: .35; }
+            50% { transform: translateY(-4px); opacity: 1; }
         }
         .input-area {
             flex-shrink: 0;
-            padding: 16px 20px;
-            background: #1a1a1a;
-            border-top: 1px solid #2a2a2a;
-            display: flex;
-            gap: 10px;
-        }
-        .input-area input {
-            flex: 1;
             padding: 12px;
-            background: #2a2a2a;
-            border: 1px solid #333;
-            border-radius: 8px;
-            color: #fff;
-            font-size: 16px;
+            background: rgba(61, 220, 151, .07);
+            border-top: 1px solid rgba(61, 220, 151, .28);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .composer-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            width: 100%;
         }
         .input-area textarea {
             flex: 1;
-            padding: 12px;
-            background: #2a2a2a;
-            border: 1px solid #333;
-            border-radius: 8px;
-            color: #fff;
+            min-width: 0;
+            padding: 10px 12px;
+            background: transparent;
+            border: 1px solid rgba(61, 220, 151, .28);
+            border-radius: 4px;
+            color: #e4efe9;
             font-size: 16px;
             font-family: sans-serif;
             resize: none;
+            overflow-y: hidden;
             white-space: pre-wrap;
             word-wrap: break-word;
         }
-        .input-area button {
-            padding: 12px 20px;
-            background: #6c63ff;
-            border: none;
-            border-radius: 8px;
-            color: #fff;
+        .input-area textarea::placeholder { color: #7f9a8d; }
+        input, textarea, button {
+            appearance: none;
+            -webkit-appearance: none;
+            outline: none;
+        }
+        .add-contact input:focus,
+        .input-area textarea:focus {
+            outline: none;
+            border-color: #3ddc97;
+            box-shadow: none;
+        }
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            border-radius: 4px;
             cursor: pointer;
         }
-        .logout {
-            background: none;
+        #attach-btn {
+            background: transparent;
+            border: 1px solid rgba(61, 220, 151, .28);
+        }
+        #send-btn {
+            background: #3ddc97;
             border: none;
-            color: #888;
-            cursor: pointer;
-            font-size: 13px;
+        }
+        .icon-btn:disabled {
+            opacity: 0.4;
+            cursor: default;
         }
         .lightbox {
             display: none;
@@ -190,12 +528,13 @@
         }
         @media (max-width: 600px) {
             .sidebar {
-                position: fixed;
-                left: -280px;
+                position: absolute;
+                left: -100%;
                 top: 0;
+                width: 100%;
                 height: 100%;
                 z-index: 100;
-                transition: left 0.3s ease;
+                transition: left 200ms ease-out;
             }
             .sidebar.open {
                 left: 0;
@@ -203,9 +542,7 @@
             .chat {
                 width: 100%;
             }
-            #menu-btn {
-                display: inline-block !important;
-            }
+            #menu-btn { display: block !important; }
         }
 
             @keyframes float-heart {
@@ -242,18 +579,17 @@
             }
             .reaction-picker {
                 position: absolute;
-                background: #2a2a2a;
-                border-radius: 20px;
+                background: #0e1512;
+                border: 1px solid #1f3a2e;
+                border-radius: 4px;
                 padding: 6px 10px;
                 display: flex;
                 gap: 6px;
                 z-index: 100;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.5);
             }
             .reaction-picker span {
                 font-size: 20px;
                 cursor: pointer;
-                transition: transform 0.1s;
             }
             .reaction-picker span:hover {
                 transform: scale(1.3);
@@ -265,25 +601,27 @@
                 margin-top: 4px;
             }
             .reaction-btn {
-                background: #2a2a2a;
-                border: none;
-                border-radius: 10px;
-                padding: 2px 7px;
+                background: transparent;
+                border: 1px solid rgba(61, 220, 151, .35);
+                border-radius: 999px;
+                padding: 0 6px;
                 font-size: 13px;
-                color: #fff;
+                line-height: 20px;
+                color: #7f9a8d;
                 cursor: pointer;
             }
-            .reaction-btn:hover {
-                background: #3a3a3a;
+            .message.out .reaction-btn {
+                border-color: rgba(4, 20, 13, .28);
+                color: #04140d;
             }
+            .reaction-btn:hover { background: rgba(61, 220, 151, .12); }
             .reply-preview {
-                background: #1a1a1a;
-                border-left: 3px solid #6c63ff;
+                background: #0e1512;
+                border-left: 2px solid #3ddc97;
                 padding: 6px 10px;
                 border-radius: 4px;
                 font-size: 12px;
-                color: #aaa;
-                margin-bottom: 4px;
+                color: #5d7569;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
@@ -304,27 +642,28 @@
                 flex-shrink: 0;
             }
             .reply-quote {
-                border-left: 3px solid #6c63ff;
+                border-left: 2px solid #3ddc97;
                 padding: 4px 8px;
                 margin-bottom: 6px;
                 font-size: 12px;
-                color: #aaa;
-                border-radius: 2px;
-                background: rgba(0,0,0,0.2);
+                color: #5d7569;
+                background: transparent;
             }
             .message pre {
-                background: #1e1e1e;
-                border-radius: 6px;
+                background: #15201b;
+                border-radius: 4px;
                 padding: 12px;
                 overflow-x: auto;
                 margin: 8px 0;
+                color: #e4efe9;
             }
             .message code {
-                font-family: monospace;
+                font-family: ui-monospace, "SF Mono", Menlo, monospace;
                 font-size: 13px;
-                background: #2a2a2a;
+                background: #15201b;
                 padding: 2px 4px;
                 border-radius: 4px;
+                color: #e4efe9;
             }
             .message pre code {
                 background: none;
@@ -334,17 +673,47 @@
                 margin-top: 12px;
                 margin-bottom: 8px;
             }
-            .message p {
-                margin-bottom: 6px;
+            .message p { margin: 0; }
+            .message p + p { margin-top: 6px; }
+            .chat.special .message.out {
+                background: #d94f7c;
+                color: #fff;
+                border: none;
             }
-            .typing-dots {
-                animation: blink 1.4s infinite;
-                font-size: 18px;
-                letter-spacing: 2px;
+            .chat.special .message.in {
+                background: #4a0020;
+                color: #f3d5df;
+                border-color: transparent;
             }
-            @keyframes blink {
-                0%, 100% { opacity: 0.2; }
-                50% { opacity: 1; }
+            .chat.special .message.out .msg-meta { color: rgba(255, 255, 255, .7); }
+            .chat.special .message.out .tick.read { color: #fff; }
+            @supports not (backdrop-filter: blur(1px)) {
+                .message.ai,
+                .message.ai-typing,
+                .input-area {
+                    background: #0e1512;
+                }
+            }
+            #messages.hold { opacity: 0; }
+            #messages.swap-out {
+                opacity: 0;
+                transition: opacity 280ms ease-out;
+            }
+            #messages.swap-in { animation: thread-in 420ms ease-out; }
+            @keyframes thread-in {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            .message.arrive { animation: msg-in 320ms ease-out; }
+            @keyframes msg-in {
+                from { opacity: 0; transform: translateY(8px); }
+                to { opacity: 1; transform: none; }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                *, *::before, *::after {
+                    animation: none !important;
+                    transition: none !important;
+                }
             }
 
     </style>
@@ -353,15 +722,24 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 <body>
+<div id="login-screen" hidden>
+    <div class="login-card">
+        <h1>Omni</h1>
+        <input id="login-email" type="email" placeholder="Email" autocomplete="username">
+        <input id="login-password" type="password" placeholder="Пароль" autocomplete="current-password" onkeydown="if(event.key==='Enter') loginFromApp()">
+        <button type="button" onclick="loginFromApp()">Войти</button>
+        <button type="button" class="secondary" onclick="registerFromApp()">Зарегистрироваться</button>
+        <div class="login-error" id="login-error"></div>
+    </div>
+</div>
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
     <img id="lightbox-img" src="">
 </div>
     <div class="sidebar">
         <div class="sidebar-header">
-            <span id="my-username" style="font-size:13px;color:#ccc;"></span>
-            <button id="push-btn" class="logout" onclick="enablePush()" style="margin-right:8px;">Уведомления</button>
-            <button class="logout" onclick="window.location.href='/static/profile.html'" style="margin-right:8px;">Профиль</button>
-            <button class="logout" onclick="logout()">Выйти</button>
+            <span id="my-username"></span>
+            <button class="nav-btn" onclick="window.location.href='/static/profile.html'">Профиль</button>
+            <button class="nav-btn danger" onclick="logout()">Выйти</button>
         </div>
         <div class="contacts" id="contacts"></div>
         <div class="add-contact">
@@ -372,25 +750,28 @@
 
     <div class="chat">
         <div class="chat-header" id="chat-header">
-            <button id="menu-btn" onclick="toggleSidebar()" style="display:none;background:none;border:none;color:#fff;font-size:20px;cursor:pointer;margin-right:12px;">☰</button>
-            <span id="header-dot" style="width:8px;height:8px;border-radius:50%;background:#444;margin-right:8px;display:none;flex-shrink:0;"></span>
+            <button id="menu-btn" onclick="toggleSidebar()" aria-label="Меню">☰</button>
+            <div class="ai-orb" aria-hidden="true"><span class="ring"></span><span class="ring late"></span><span class="core"></span></div>
+            <span id="header-dot"></span>
             <span id="chat-title">Выберите контакт</span>
-            <span id="typing-indicator" style="font-size:12px;color:#888;margin-left:8px;display:none;">печатает...</span>
+            <span id="typing-indicator">печатает...</span>
         </div>
-        <div class="messages" id="messages"></div>
-        <div class="input-area" style="flex-direction:column;">
+        <div class="messages" id="messages">
+            <div class="empty-chat" id="empty-chat">Выберите контакт</div>
+        </div>
+        <div class="input-area">
             <div id="reply-preview" class="reply-preview" style="display:none;">
                 <span id="reply-preview-text"></span>
                 <button onclick="cancelReply()">x</button>
             </div>
-            <div style="display:flex;gap:10px;width:100%;">
-                <textarea id="message-input" placeholder="Сообщение..."
+            <div class="composer-row">
+                <textarea id="message-input" placeholder="Сообщение..." disabled
                     onkeydown="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }"
-                    oninput="onTyping(); autoResize()"
-                    style="resize: none; overflow-y: hidden; white-space: pre-wrap;"></textarea>
+                    oninput="onTyping(); autoResize()"></textarea>
             <input type="file" id="file-input" accepts="image/*" multiple style="display:none" onchange="uploadFiles(this.files)"/>
-            <button onclick="document.getElementById('file-input').click()" style="padding:12px;background:#2a2a2a;border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:18px;">📎</button>
-            <button onclick="sendMessage()">→</button>
+            <button id="attach-btn" class="icon-btn" disabled onclick="document.getElementById('file-input').click()" aria-label="Вложение"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 7.5v3.2a2 2 0 0 0 4 0V5.2a3 3 0 0 0-6 0v6a4 4 0 0 0 8 0V7" fill="none" stroke="#7f9a8d" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+            <button id="send-btn" class="icon-btn" disabled onclick="sendMessage()" aria-label="Отправить"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v9M4.5 6.5 8 3l3.5 3.5" fill="none" stroke="#04140d" stroke-width="1.6" stroke-linecap="square"/></svg>            </button>
+        </div>
         </div>
     </div>
 
@@ -408,14 +789,23 @@
         const email = localStorage.getItem("email");
         const token = localStorage.getItem("token");
 
-        if (!token) window.location.href = "/static/index.html";
+        if (!token) {
+            document.getElementById("login-screen").hidden = false;
+        }
 
         function pinChatToScreen() {
             const vv = window.visualViewport;
-            const height = vv ? vv.height : window.innerHeight;
-            const top = vv ? vv.offsetTop : 0;
-            document.documentElement.style.setProperty("--app-height", height + "px");
-            document.documentElement.style.setProperty("--app-top", top + "px");
+            if (!vv || vv.height < 50) {
+                document.documentElement.style.removeProperty("--app-height");
+                document.documentElement.style.removeProperty("--app-top");
+                document.body.classList.remove("keyboard-open");
+                return;
+            }
+            const keyboardOpen = window.screen.availHeight - vv.height > 120;
+            document.documentElement.style.setProperty("--app-height", Math.round(vv.height) + "px");
+            document.documentElement.style.setProperty("--app-top", Math.round(vv.offsetTop) + "px");
+            document.body.classList.toggle("keyboard-open", keyboardOpen);
+            window.scrollTo(0, 0);
             const messages = document.getElementById("messages");
             if (!messages) return;
             const distanceFromBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight;
@@ -426,18 +816,21 @@
             visualViewport.addEventListener("scroll", pinChatToScreen);
         }
         window.addEventListener("resize", pinChatToScreen);
+        window.addEventListener("pageshow", pinChatToScreen);
         pinChatToScreen();
 
-        document.getElementById("my-username").innerText = "@" + (localStorage.getItem("username") || email);
-        if (!localStorage.getItem("username")) {
-            fetch(`${API}/auth/me`, {
-                headers: {"Authorization": `Bearer ${token}`}
-            }).then(r => r.json()).then(data => {
-                if (data.username) {
-                    localStorage.setItem("username", data.username);
-                    document.getElementById("my-username").innerText = "@" + data.username;
-                }
-            });
+        if (token) {
+            document.getElementById("my-username").innerText = "@" + (localStorage.getItem("username") || email);
+            if (!localStorage.getItem("username")) {
+                fetch(`${API}/auth/me`, {
+                    headers: {"Authorization": `Bearer ${token}`}
+                }).then(r => r.json()).then(data => {
+                    if (data.username) {
+                        localStorage.setItem("username", data.username);
+                        document.getElementById("my-username").innerText = "@" + data.username;
+                    }
+                });
+            }
         }
 
 
@@ -481,58 +874,51 @@
             const div = document.getElementById("contacts");
             div.innerHTML = "";
 
-            const aiBlock = document.createElement("div");
-
             const aiEl = document.createElement("div");
-            aiEl.className = "contact" + (currentContact === "ai-bot@omni" ? " active" : "");
-            aiEl.style.cssText = "display:flex;align-items:center;border-bottom:2px solid #6c63ff;";
+            aiEl.className = "contact contact-ai" + (currentContact === "ai-bot@omni" ? " active" : "");
             aiEl.onclick = () => {
                 openChat("ai-bot@omni");
                 document.querySelector(".sidebar").classList.remove("open");
             };
             const aiIcon = document.createElement("span");
-            aiIcon.innerText = "🤖";
-            aiIcon.style.cssText = "margin-right:10px;font-size:18px;";
+            aiIcon.className = "ai-mark";
             const aiName = document.createElement("span");
-            aiName.innerText = "Omni AI";
-            aiName.style.cssText = "flex:1;color:#6c63ff;font-weight:bold;";
+            aiName.className = "contact-name";
+            aiName.textContent = "Omni AI";
             aiEl.appendChild(aiIcon);
             aiEl.appendChild(aiName);
-            aiBlock.appendChild(aiEl);
-            div.appendChild(aiBlock);
+            div.appendChild(aiEl);
 
             const contactsHeader = document.createElement("div");
-            contactsHeader.style.cssText = "padding:12px 20px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-top:10px;";
-            contactsHeader.innerText = "Контакты";
+            contactsHeader.className = "contacts-label";
+            contactsHeader.textContent = "Контакты";
             div.appendChild(contactsHeader);
 
             contacts.filter(c => c.email !== "ai-bot@omni").forEach(c => {
-
                 const el = document.createElement("div");
                 el.className = "contact" + (c.email === currentContact ? " active" : "");
-                el.style.display = "flex";
-                el.style.alignItems = "center";
 
                 const dot = document.createElement("span");
-                dot.style.cssText = "width:8px;height:8px;border-radius:50%;background:#444;margin-right:8px;flex-shrink:0;";
+                dot.className = "presence";
                 dot.id = `dot-${c.email.replace('@','_').replace('.','_')}`;
 
                 const name = document.createElement("span");
-                name.innerText = c.username;
-                name.style.flex = "1";
+                name.className = "contact-name";
+                name.textContent = c.username;
                 name.onclick = () => {
                     openChat(c.email);
                     document.querySelector(".sidebar").classList.remove("open");
                 };
 
                 const badge = document.createElement("span");
+                badge.className = "unread-badge";
                 badge.id = `badge-${c.email.replace('@','_').replace(/\./g,'_')}`;
-                badge.style.cssText = "background:#ff4444;color:#fff;border-radius:10px;padding:2px 7px;font-size:11px;display:none;margin-right:6px;";
-
 
                 const del = document.createElement("button");
-                del.innerText = "✕";
-                del.style.cssText = "background:none;border:none;color:#888;cursor:pointer;font-size:12px;";
+                del.className = "contact-del";
+                del.type = "button";
+                del.setAttribute("aria-label", "Удалить контакт");
+                del.textContent = "✕";
                 del.onclick = (e) => { e.stopPropagation(); deleteContact(c.email); };
 
                 el.appendChild(dot);
@@ -569,11 +955,11 @@
                 const data = await res.json();
                 const id = `dot-${c.email.replace('@','_').replace('.','_')}`;
                 const dot = document.getElementById(id);
-                if (dot) dot.style.background = data.online ? "#44ff44" : "#444";
+                if (dot) dot.style.background = data.online ? "#ffffff" : "#3a3f3c";
                 if (currentContact) {
                     const res = await fetch(`${API}/online/${currentContact}`);
                     const data = await res.json();
-                    document.getElementById("header-dot").style.background = data.online ? "#44ff44" : "#444";
+                    document.getElementById("header-dot").style.background = data.online ? "#ffffff" : "#3a3f3c";
                 }
             }
         }
@@ -610,25 +996,80 @@
             document.getElementById("new-contact").value = "";
         }
 
+        function enableComposer() {
+            document.getElementById("message-input").disabled = false;
+            document.getElementById("attach-btn").disabled = false;
+            document.getElementById("send-btn").disabled = false;
+            const empty = document.getElementById("empty-chat");
+            if (empty) empty.remove();
+        }
+
+        let chatSwap = 0;
+
+        function motionOff() {
+            return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        }
+
+        function pinThreadEnd(box) {
+            const pin = () => { box.scrollTop = box.scrollHeight; };
+            pin();
+            requestAnimationFrame(() => {
+                pin();
+                requestAnimationFrame(pin);
+            });
+        }
+
         function openChat(contact) {
+            const swap = ++chatSwap;
             currentContact = contact;
+            enableComposer();
             const c = contacts.find(c => c.email === contact);
-            document.getElementById("chat-title").innerText = contact === "ai-bot@omni" ? "🤖 Omni AI" : (c ? c.username : contact);
+            document.getElementById("chat-title").textContent = contact === "ai-bot@omni" ? "Omni AI" : (c ? c.username : contact);
             const headerDot = document.getElementById("header-dot");
             if (contact === "ai-bot@omni") {
                 headerDot.style.display = "none";
             } else {
                 headerDot.style.display = "inline-block";
-                headerDot.style.background = "#444";
+                headerDot.style.background = "#3a3f3c";
             }
 
-            document.getElementById("messages").innerHTML = "";
-            seenMessageIds = new Set();
-            lastMessageId = 0;
-            historyReady = false;
-            hideAiTypingIndicator();
+            const box = document.getElementById("messages");
+            const showThread = () => {
+                if (swap !== chatSwap) return;
+                box.classList.remove("swap-out");
+                if (!motionOff()) box.classList.add("hold");
+                box.innerHTML = "";
+                seenMessageIds = new Set();
+                lastMessageId = 0;
+                lastMessageDay = "";
+                historyReady = false;
+                hideAiTypingIndicator();
+                loadHistory(contact).finally(() => {
+                    if (swap !== chatSwap) return;
+                    box.classList.remove("hold");
+                    pinThreadEnd(box);
+                    if (motionOff()) return;
+                    box.classList.remove("swap-in");
+                    void box.offsetWidth;
+                    box.classList.add("swap-in");
+                    box.addEventListener("animationend", (e) => {
+                        if (e.target !== box) return;
+                        box.classList.remove("swap-in");
+                    });
+                });
+            };
+            if (!motionOff() && box.childElementCount) {
+                setTimeout(() => {
+                    if (swap !== chatSwap) return;
+                    box.classList.add("swap-out");
+                    setTimeout(showThread, 280);
+                }, 220);
+            } else {
+                showThread();
+            }
 
             const chat = document.querySelector(".chat");
+            chat.classList.toggle("ai-open", contact === "ai-bot@omni");
 
             if ((contact === "kazambievauzli@mail.ru" && email === "asotnikov705@gmail.com") ||
                 (contact === "asotnikov705@gmail.com" && email === "kazambievauzli@mail.ru")) {
@@ -644,7 +1085,6 @@
 
             renderContacts();
             document.querySelector(".sidebar").classList.remove("open");
-            loadHistory(contact);
 
             fetch(`${API}/read/${email}/${contact}`, {
                 method: "POST",
@@ -740,16 +1180,16 @@
                     typingTimeout = setTimeout(() => indicator.style.display = "none", 3000);
                 } else if (data.type === "read" && data.from === currentContact) {
                     document.querySelectorAll(".tick").forEach(tick => {
-                        tick.innerText = "✓✓";
-                        tick.style.color = "#4caf50";
+                        tick.textContent = "✓✓";
+                        tick.classList.add("read");
                     });
                 } else if (data.from === "ai-bot@omni" && (data.chat_with === currentContact || currentContact === "ai-bot@omni")) {
                     hideAiTypingIndicator();
-                    addMessage(data.message, "in", null, data.id, false, null, null, true);
+                    addMessage(data.message, "in", null, data.id, false, null, null, true, true);
                 } else if (data.from === email && data.to === currentContact) {
                     addMessage(data.message, "out", null, data.id, false, null, null);
                 } else if (data.from === currentContact) {
-                    addMessage(data.message, "in", null, data.id, false, data.reply_to_id, data.reply_to_text);
+                    addMessage(data.message, "in", null, data.id, false, data.reply_to_id, data.reply_to_text, false, true);
                     fetch(`${API}/read/${email}/${currentContact}`, {
                         method: "POST",
                         headers: {"Authorization": `Bearer ${token}`}
@@ -772,7 +1212,31 @@
         }
 
 
-        function addMessage(text, type, time = null, msgId = null, isRead = false, replyId = null, replyText = null, isAi = false) {
+        let lastMessageDay = "";
+
+        function dayKey(time) {
+            const d = new Date(time);
+            return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+        }
+
+        function dayLabel(time) {
+            const d = new Date(time);
+            const start = (dt) => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
+            const diff = Math.round((start(new Date()) - start(d)) / 86400000);
+            if (diff === 0) return "сегодня";
+            if (diff === 1) return "вчера";
+            return d.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+        }
+
+        function insertInThread(container, node) {
+            if (aiTypingElement && container.contains(aiTypingElement)) {
+                container.insertBefore(node, aiTypingElement);
+            } else {
+                container.appendChild(node);
+            }
+        }
+
+        function addMessage(text, type, time = null, msgId = null, isRead = false, replyId = null, replyText = null, isAi = false, arrive = false) {
             if (msgId && seenMessageIds.has(String(msgId))) return;
             if (msgId) {
                 seenMessageIds.add(String(msgId));
@@ -785,24 +1249,23 @@
             const div = document.getElementById("messages");
             const msg = document.createElement("div");
             msg.className = "message " + type;
-
-            if (isAi) {
-                const aiLabel = document.createElement("div");
-                aiLabel.style.cssText = "font-size:11px;color:#6c63ff;margin-bottom:4px;";
-                aiLabel.innerText = "🤖 Omni AI";
-                msg.appendChild(aiLabel);
-            }
+            if (isAi) msg.classList.add("ai");
+            if (arrive) msg.classList.add("arrive");
 
             const isSpecialChat = (currentContact === "kazambievauzli@mail.ru" && email === "asotnikov705@gmail.com") ||
                       (currentContact === "asotnikov705@gmail.com" && email === "kazambievauzli@mail.ru");
-            if (isSpecialChat) {
-                if (type === "out") msg.style.background = "#d94f7c";
-                else if (type === "in") msg.style.background = "#4a0020";
-            } else {
-                if (type === "out") msg.style.background = "#6c63ff";
-                else if (type === "in") msg.style.background = "#2a2a2a";
-            }
 
+            if (isAi) {
+                const caption = document.createElement("div");
+                caption.className = "ai-caption";
+                caption.textContent = "omni ai";
+                msg.appendChild(caption);
+                ["tl", "br"].forEach((side) => {
+                    const corner = document.createElement("span");
+                    corner.className = "corner " + side;
+                    msg.appendChild(corner);
+                });
+            }
 
             if (replyText) {
                 const quote = document.createElement("div");
@@ -811,42 +1274,47 @@
                 msg.appendChild(quote);
             }
 
+            const line = document.createElement("div");
+            line.className = "msg-line";
+
             if (text.startsWith("/uploads/")) {
                 const img = document.createElement("img");
                 img.src = `${API}${text}`;
-                img.style.cssText = "max-width:100%;border-radius:8px;display:block;";
+                img.style.cssText = "max-width:100%;border-radius:4px;display:block;";
                 img.style.cursor = "zoom-in";
                 img.onclick = () => openLightbox(img.src);
-                msg.appendChild(img);
+                line.appendChild(img);
             } else {
                 const htmlContent = marked.parse(text);
                 const contentDiv = document.createElement("div");
+                contentDiv.className = "msg-body";
                 contentDiv.innerHTML = htmlContent;
-                msg.appendChild(contentDiv);
+                line.appendChild(contentDiv);
                 contentDiv.querySelectorAll('pre code').forEach((block) => {
                     hljs.highlightElement(block);
                 });
             }
 
             const meta = document.createElement("div");
-            meta.style.cssText = `font-size:11px;margin-top:4px;display:flex;align-items:center;justify-content:${type === 'out' ? 'flex-end' : 'flex-start'};gap:4px;`;
+            meta.className = "msg-meta";
 
             if (time) {
                 const timeEl = document.createElement("span");
-                timeEl.style.color = type === 'out' ? '#ccc' : '#888';
-                timeEl.innerText = new Date(time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                timeEl.className = "msg-time";
+                timeEl.textContent = new Date(time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 meta.appendChild(timeEl);
             }
 
             if (type === 'out') {
                 const tick = document.createElement("span");
-                tick.className = "tick";
-                tick.innerText = isRead ? "✓✓" : "✓";
-                tick.style.color = isRead ? "#4caf50" : "#ccc";
+                tick.className = "tick" + (isRead ? " read" : "");
+                tick.textContent = isRead ? "✓✓" : "✓";
                 if (msgId) tick.dataset.id = msgId;
                 meta.appendChild(tick);
             }
 
+            line.appendChild(meta);
+            msg.appendChild(line);
 
             const reactionsBar = document.createElement("div");
             reactionsBar.className = "reactions-bar";
@@ -854,14 +1322,19 @@
                 reactionsBar.id = `reactions-${msgId}`;
                 loadReactions(msgId);
             }
-
-            msg.appendChild(meta);
             msg.appendChild(reactionsBar);
-            if (aiTypingElement && div.contains(aiTypingElement)) {
-                div.insertBefore(msg, aiTypingElement);
-            } else {
-                div.appendChild(msg);
+
+            if (time) {
+                const key = dayKey(time);
+                if (key !== lastMessageDay) {
+                    lastMessageDay = key;
+                    const sep = document.createElement("div");
+                    sep.className = "date-sep";
+                    sep.textContent = dayLabel(time);
+                    insertInThread(div, sep);
+                }
             }
+            insertInThread(div, msg);
             div.scrollTop = div.scrollHeight;
 
 
@@ -880,7 +1353,7 @@
 
                 const replyBth = document.createElement("button");
                 replyBth.innerText = "↩";
-                replyBth.style.cssText = "background:none;border:none;color:#888;cursor:pointer;font-size:16px;padding:2px 6px;opacity:0;transition:opacity 0.2s;";
+                replyBth.style.cssText = "background:none;border:none;color:inherit;cursor:pointer;font-size:14px;padding:0 0 0 4px;opacity:0;";
                 replyBth.onclick = (e) => {
                     e.stopPropagation();
                     setReply(msgId,text);
@@ -921,19 +1394,8 @@
 
             const messagesDiv = document.getElementById("messages");
             const typingMsg = document.createElement("div");
-            typingMsg.className = "message in ai-typing";
-            typingMsg.style.background = "#2a2a2a";
-            typingMsg.style.opacity = "0.7";
-            typingMsg.style.display = "flex";
-            typingMsg.style.alignItems = "center";
-            typingMsg.style.gap = "8px";
-            typingMsg.innerHTML = `
-                <div style="display:flex;align-items:center;gap:6px;">
-                    <span>🤖</span>
-                    <span>Omni AI печатает</span>
-                    <span class="typing-dots">...</span>
-                </div>
-            `;
+            typingMsg.className = "message in ai ai-typing";
+            typingMsg.innerHTML = '<span class="corner tl"></span><span class="corner br"></span><span class="typing-dot"></span><span class="typing-dot d2"></span><span class="typing-dot d3"></span>';
             messagesDiv.appendChild(typingMsg);
             aiTypingElement = typingMsg;
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -1067,89 +1529,74 @@
             cancelReply();
         }
 
-        function urlBase64ToUint8Array(base64String) {
-            const padding = "=".repeat((4 - base64String.length % 4) % 4);
-            const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-            const raw = atob(base64);
-            return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
-        }
-
-        async function enablePush() {
-            if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-                alert("Этот телефон не умеет уведомления");
-                return;
-            }
-            const ready = navigator.serviceWorker.ready;
-            const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000));
-            let reg;
-            try {
-                reg = await Promise.race([ready, timeout]);
-            } catch (e) {
-                alert("Скрипт sw.js не установился. Проверь, что файл залит, и открой иконку заново.");
-                return;
-            }
-            let sub = await reg.pushManager.getSubscription();
-            if (!sub) {
-                const permission = await Notification.requestPermission();
-                if (permission !== "granted") {
-                    alert("Разрешение не дано");
-                    return;
-                }
-                const keyRes = await fetch(`${API}/push/vapid-public`, {
-                    headers: {"Authorization": `Bearer ${token}`}
-                });
-                const keyData = await keyRes.json();
-                if (!keyRes.ok) {
-                    alert(keyData.detail || "Сервер не отдал ключ");
-                    return;
-                }
-                sub = await reg.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(keyData.public_key)
-                });
-            }
-            const res = await fetch(`${API}/push/subscribe`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify(sub)
-            });
-            if (res.ok) {
-                document.getElementById("push-btn").style.display = "none";
-                alert("Адрес телефона сохранён. Само уведомление придёт на следующем шаге.");
-            } else {
-                alert("Сервер не сохранил адрес");
-            }
-        }
-
         function logout() {
             localStorage.removeItem("token");
             localStorage.removeItem("email");
-            window.location.href = "/static/index.html";
+            localStorage.removeItem("username");
+            window.location.replace("/static/app.html");
         }
 
-
-        async function hidePushButtonIfEnabled() {
-            if (!("serviceWorker" in navigator) || Notification.permission !== "granted") return;
+        async function loginFromApp() {
+            const emailInput = document.getElementById("login-email").value.trim();
+            const password = document.getElementById("login-password").value;
+            const error = document.getElementById("login-error");
+            error.style.color = "#ff6b6b";
+            error.textContent = "";
             try {
-                const reg = await navigator.serviceWorker.ready;
-                const sub = await reg.pushManager.getSubscription();
-                if (sub) document.getElementById("push-btn").style.display = "none";
-            } catch (e) {}
+                const res = await fetch(`${API}/auth/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: emailInput, password })
+                });
+                const data = await res.json();
+                if (!data.access_token) {
+                    error.textContent = "Неверный email или пароль";
+                    return;
+                }
+                localStorage.setItem("token", data.access_token);
+                localStorage.setItem("email", emailInput);
+                if (data.username) localStorage.setItem("username", data.username);
+                window.location.replace("/static/app.html");
+            } catch (e) {
+                error.textContent = "Сервер не ответил";
+            }
         }
 
-        loadContacts();
-        hidePushButtonIfEnabled();
-        updateOnlineStatus();
-        updateUnread();
-        setInterval(updateOnlineStatus, 5000);
-        setInterval(updateUnread, 5000);
-        connectWS();
-        updateUnreadCount();
-        setInterval(updateUnreadCount, 3000); // каждые 3 секунды
-        setInterval(syncOpenChat, 3000);
+        async function registerFromApp() {
+            const emailInput = document.getElementById("login-email").value.trim();
+            const password = document.getElementById("login-password").value;
+            const error = document.getElementById("login-error");
+            error.style.color = "#ff6b6b";
+            error.textContent = "";
+            try {
+                const res = await fetch(`${API}/auth/register`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: emailInput, password })
+                });
+                const data = await res.json();
+                if (data.id) {
+                    error.style.color = "#3ddc97";
+                    error.textContent = "Зарегистрирован. Войдите.";
+                    return;
+                }
+                error.textContent = "Ошибка регистрации";
+            } catch (e) {
+                error.textContent = "Сервер не ответил";
+            }
+        }
+
+        if (token) {
+            loadContacts();
+            updateOnlineStatus();
+            updateUnread();
+            setInterval(updateOnlineStatus, 5000);
+            setInterval(updateUnread, 5000);
+            connectWS();
+            updateUnreadCount();
+            setInterval(updateUnreadCount, 3000);
+            setInterval(syncOpenChat, 3000);
+        }
     </script>
 </body>
 </html>

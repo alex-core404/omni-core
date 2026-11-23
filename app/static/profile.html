@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -11,40 +11,49 @@
     <link rel="apple-touch-icon" href="/static/icon-180.png">
     <script>
         if ("serviceWorker" in navigator) {
-            navigator.serviceWorker.register("/static/sw.js");
+            navigator.serviceWorker.getRegistrations().then((regs) => {
+                regs.forEach((reg) => {
+                    if (!reg.scope.includes("/static/push/")) reg.unregister();
+                });
+            });
         }
     </script>
     <title>Omni — Профиль</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { background: #080c0a; }
         body {
-            background: #0f0f0f;
-            color: #fff;
+            background: #080c0a;
+            color: #e4efe9;
             font-family: sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
         }
         .card {
-            background: #1a1a1a;
-            border-radius: 12px;
-            padding: 40px;
-            width: 360px;
+            background: transparent;
+            border-radius: 0;
+            padding: 40px 24px;
+            width: min(360px, 100%);
             display: flex;
             flex-direction: column;
             gap: 16px;
         }
-        h2 { font-size: 20px; }
-        .email { color: #888; font-size: 14px; }
+        h2 { font-size: 20px; font-weight: 500; }
+        .email { color: #5d7569; font-size: 14px; }
         input {
             padding: 12px;
-            background: #2a2a2a;
-            border: 1px solid #333;
+            background: #1a2420;
+            border: 1px solid #1c2a24;
             border-radius: 8px;
-            color: #fff;
-            font-size: 15px;
+            color: #e4efe9;
+            font-size: 16px;
             width: 100%;
+        }
+        input:focus {
+            outline: none;
+            border-color: #3ddc97;
         }
         button {
             padding: 12px;
@@ -53,16 +62,27 @@
             cursor: pointer;
             font-size: 15px;
         }
-        .btn-save { background: #6c63ff; color: #fff; }
-        .btn-back { background: #2a2a2a; color: #aaa; }
-        .msg { font-size: 13px; color: #44ff44; display: none; }
-        .err { font-size: 13px; color: #ff4444; display: none; }
+        .btn-save { background: #3ddc97; color: #04140d; }
+        .btn-back, .btn-note {
+            background: transparent;
+            border: 1px solid rgba(61, 220, 151, .28);
+            color: #e4efe9;
+        }
+        .msg { font-size: 13px; color: #3ddc97; display: none; }
+        .err { font-size: 13px; color: #ff6b6b; display: none; }
         @media (max-width: 600px) {
+            body {
+                align-items: stretch;
+                justify-content: flex-start;
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: env(safe-area-inset-bottom);
+            }
             .card {
                 width: 100%;
-                height: 100vh;
+                height: auto;
+                min-height: 100%;
                 border-radius: 0;
-                padding: 30px 20px;
+                padding: 24px 20px;
             }
         }
     </style>
@@ -73,6 +93,7 @@
         <div class="email" id="my-email"></div>
         <input id="username" placeholder="Введите логин (4-20 символов)" />
         <button class="btn-save" onclick="saveUsername()">Сохранить</button>
+        <button id="push-btn" class="btn-note" onclick="enablePush()">Уведомления</button>
         <div class="msg" id="msg">Логин сохранён!</div>
         <div class="err" id="err"></div>
         <button class="btn-back" onclick="goBack()">← Вернуться в чат</button>
@@ -111,6 +132,73 @@
         function goBack() {
             window.location.href = "/static/app.html";
         }
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = "=".repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+            const raw = atob(base64);
+            return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+        }
+
+        async function enablePush() {
+            if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+                alert("Этот телефон не умеет уведомления");
+                return;
+            }
+            let reg;
+            try {
+                reg = await navigator.serviceWorker.register("/static/push/sw.js");
+            } catch (e) {
+                alert("Скрипт уведомлений не установился.");
+                return;
+            }
+            let sub = await reg.pushManager.getSubscription();
+            if (!sub) {
+                const permission = await Notification.requestPermission();
+                if (permission !== "granted") {
+                    alert("Разрешение не дано");
+                    return;
+                }
+                const keyRes = await fetch(`${API}/push/vapid-public`, {
+                    headers: {"Authorization": `Bearer ${token}`}
+                });
+                const keyData = await keyRes.json();
+                if (!keyRes.ok) {
+                    alert(keyData.detail || "Сервер не отдал ключ");
+                    return;
+                }
+                sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(keyData.public_key)
+                });
+            }
+            const res = await fetch(`${API}/push/subscribe`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify(sub)
+            });
+            if (res.ok) {
+                document.getElementById("push-btn").style.display = "none";
+                alert("Адрес телефона сохранён. Баннер придёт, когда чат закрыт.");
+            } else {
+                alert("Сервер не сохранил адрес");
+            }
+        }
+
+        async function hidePushButtonIfEnabled() {
+            if (!("serviceWorker" in navigator) || Notification.permission !== "granted") return;
+            try {
+                const reg = await navigator.serviceWorker.getRegistration("/static/push/sw.js");
+                if (!reg) return;
+                const sub = await reg.pushManager.getSubscription();
+                if (sub) document.getElementById("push-btn").style.display = "none";
+            } catch (e) {}
+        }
+
+        hidePushButtonIfEnabled();
     </script>
 </body>
 </html>

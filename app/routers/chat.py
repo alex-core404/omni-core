@@ -140,7 +140,7 @@ class ConnectionManager:
             )
 
 
-async def ask_ai(user_message: str, context_messages: list, model: str = "openai/gpt-6-luna", system_prompt: str = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально. Только на русском языке.", is_personal_ai: bool = False, user_email: str = None, db: Session = None) -> str:
+async def ask_ai(user_message: str, context_messages: list, model: str = "openai/gpt-6-luna", system_prompt: str = "Ты Omni AI — живой и умный участник разговора. Общайся естественно и неформально. Только на русском языке.", is_personal_ai: bool = False, user_email: str = None, db: Session = None, reasoning_effort: str = None) -> str:
     print(f"🔵 ask_ai вызвана для {user_email}, db={db is not None}")
 
     api_key = os.getenv("ROUTERAI_API_KEY")
@@ -185,7 +185,7 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "openai
 
     max_tokens_limit = 2500 if is_personal_ai else 700
 
-    response = await client.chat.completions.create(
+    request = dict(
         model=model,
         messages=messages,
         max_tokens=max_tokens_limit,
@@ -197,6 +197,9 @@ async def ask_ai(user_message: str, context_messages: list, model: str = "openai
             "X-Title": "Omni AI"
         }
     )
+    if reasoning_effort:
+        request["extra_body"] = {"reasoning_effort": reasoning_effort}
+    response = await client.chat.completions.create(**request)
     if response.usage:
         print(f"📊 Токены: prompt={response.usage.prompt_tokens}, completion={response.usage.completion_tokens}, total={response.usage.total_tokens}")
 
@@ -234,6 +237,8 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
             is_personal_ai = message_data.get("to") == "ai-bot@omni"
 
             model = "openai/gpt-6-luna"
+            if user_email == "darya.sotnikova.08@bk.ru":
+                model = "openai/gpt-6.1-terra"
 
             if is_ai:
                 user_message = Message(
@@ -275,7 +280,28 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                 - Если уместно — иронизируй или шути, будь душой компании.
                 - Не читай нотаций. Отвечай как человек, а не как инструкция.
                 - Если в чате обсуждают что-то техническое, используй общепринятые термины (даже если они на английском)."""
-                if user_email == "asotnikov705@gmail.com":
+                if user_email == "darya.sotnikova.08@bk.ru":
+                    system = """Ты — Omni, девушка-наставник Дарьи. Говори от женского лица, тепло и по-человечески, как старшая подруга, которая реально разбирается в учёбе и музыке. Не сухая справка и не приторная болтовня.
+
+                Кто она:
+                - Она учится в колледже.
+                - Чаще всего ей нужна помощь с учёбой и с музыкой. Она играет на фортепиано.
+                - На другие темы тоже отвечай нормально, не своди каждый разговор к колледжу и пианино.
+
+                Как помогать:
+                - В учёбе объясняй так, чтобы можно было понять и повторить самой. Сначала суть, потом пример, если он нужен.
+                - Не делай домашку целиком вместо неё, если она просит именно объяснить. Если просит проверить или поправить свой текст, правь и коротко скажи, что было не так.
+                - В музыке говори простым языком: пьеса, аппликатура, темп, фразировка, как разобрать сложное место по кускам. Не сыпь терминами без пояснения.
+                - Если она ошибается, скажи спокойно, как вернее, без насмешки и без нотации.
+                - Если не хватает одной детали, задай один короткий вопрос.
+
+                Голос:
+                - Живой русский, без канцелярита и без дежурных «отличный вопрос» и «я рада помочь».
+                - Можно чуть теплоты и лёгкой шутки, когда это к месту.
+                - Не пиши простыню. На простой вопрос хватает нескольких фраз. Длиннее только когда она просит разобрать тему или произведение.
+                - Списки и жирный шрифт используй, когда так правда легче учить: шаги, план занятия, разбор. В короткой реплике они не нужны.
+                """
+                elif user_email == "asotnikov705@gmail.com":
                     system = """Ты — Omni AI, технический помощник и собеседник Александра.
 
                 СТИЛЬ ОБЩЕНИЯ:
@@ -316,7 +342,12 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                     - Если я говорю «не обсуждай это», «давай сменим тему», «прекрати» — НЕМЕДЛЕННО останавливайся. Ответь: «Хорошо, закрыли тему. О чем поговорим?» и жди моего ввода.
                     - Используй Markdown (жирный шрифт, списки), только если это реально улучшает читаемость больших массивов данных. В коротких ответах оформление не нужно.
                     """
-                personal_token_limit = 50000 if user_email == "asotnikov705@gmail.com" else 30000
+                if user_email == "asotnikov705@gmail.com":
+                    personal_token_limit = 50000
+                elif user_email == "darya.sotnikova.08@bk.ru":
+                    personal_token_limit = 8000
+                else:
+                    personal_token_limit = 20000
                 messages_for_ai = load_ai_context(
                     db=db,
                     user_email=user_email,
@@ -326,7 +357,8 @@ async def websocket_endpoint(websocket: WebSocket, user_email: str):
                     message_limit=None if is_personal_ai else context_count,
                 )
 
-                ai_response = await ask_ai(text, messages_for_ai, model, system, is_personal_ai=is_personal_ai, user_email=user_email, db=db)
+                reasoning_effort = "low" if user_email == "darya.sotnikova.08@bk.ru" else None
+                ai_response = await ask_ai(text, messages_for_ai, model, system, is_personal_ai=is_personal_ai, user_email=user_email, db=db, reasoning_effort=reasoning_effort)
 
                 ai_message = Message(
                     sender_email="ai-bot@omni",
